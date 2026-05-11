@@ -1,5 +1,6 @@
 import streamlit as st
 import sports_festival 
+import academic_fest
 
 # 1. 웹앱 기본 설정
 st.set_page_config(
@@ -83,8 +84,7 @@ elif menu == "🎪 마리마당 축제":
     st.write("알록달록한 마리마당 축제 전용 페이지가 들어갈 자리입니다.")
 
 elif menu == "📚 청람 학술제":
-    st.title("📚 청람 학술제")
-    st.write("지적이고 차분한 학술제 전용 페이지가 들어갈 자리입니다.")
+    academic_fest.show_page()
 
 elif menu == "💡 행사 추천 및 설문":
     st.title("💡 행사 추천 및 설문조사")
