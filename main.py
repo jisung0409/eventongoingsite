@@ -1,42 +1,60 @@
 import streamlit as st
+import sports_festival # 방금 만든 체육대회 파일
+# import marimadang # 나중에 연결할 파일
+# import academic_fest # 나중에 연결할 파일
 
-def show_page():
-    # 1. 알록달록한 타이틀과 인사말
-    st.title("🎪 마리마당 축제에 오신걸 환영해요! 🎈")
-    st.markdown("### ✨ 반짝반짝 신나는 하루를 만들어봐요! ✨")
-    
-    st.divider() # 귀여운 구분선
+# 1. 웹앱 기본 설정 (다크모드 감성에 맞게 아이콘과 제목 설정)
+st.set_page_config(
+    page_title="강화고 행사 통합 관리 시스템", 
+    page_icon="⚡", 
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
 
-    # 2. 스케치하신 4개의 메인 메뉴 (컬러풀한 박스 활용)
-    st.markdown("#### 🎡 무엇을 알아볼까요?")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        # success = 초록색 박스
-        st.success("🗓️ **축제 일정 전체보기**\n\n오늘의 주요 행사 및 공연 시간 확인")
-        # info = 파란색 박스
-        st.info("🎤 **장기자랑 무대 신청**\n\n신청 기간 및 방법, 참가 자격 확인")
-
-    with col2:
-        # warning = 노란색 박스
-        st.warning("🍔 **인기 부스 & 푸드트럭**\n\n전체 부스 위치 및 운영 시간 확인")
-        # error = 빨간색 박스
-        st.error("📢 **공지사항 및 안내**\n\n건의 사항 수집 및 비상 연락망")
-
+# 2. 사이드바 네비게이션
+with st.sidebar:
+    st.header("📌 강화고 행사 메뉴")
+    menu = st.radio(
+        "이동할 페이지를 선택하세요:",
+        [
+            "🏠 홈", 
+            "🏆 체육대회", 
+            "🎪 마리마당 축제", 
+            "📚 청람 학술제", 
+            "💡 행사 추천 및 설문"
+        ]
+    )
     st.divider()
+    # 개발자 정보
+    st.caption("👨‍💻 개발팀: 헬로월드 (코딩동아리)")
+    st.caption("👨‍💻 개발자: 30508 김지성")
+    st.caption("⚙️ 시스템 버전: v1.0")
 
-    # 3. 장기자랑 신청 폼 (UI 껍데기 - 나중에 DB랑 연결할 부분)
-    st.markdown("### 🌟 나도 무대 주인공! 장기자랑 신청하기 🌟")
+# 3. 페이지 라우팅 (선택한 메뉴에 따라 화면 변경)
+if menu == "🏠 홈":
+    st.title("⚡ 강화고 행사 통합 관리 시스템")
+    st.markdown("### 환영합니다! 강화고등학교의 모든 행사를 한곳에서 확인하세요.")
+    st.info("👈 왼쪽 사이드바에서 원하는 행사를 선택해 주세요.")
     
-    with st.form("talent_show_form"):
-        st.text_input("학번과 이름을 적어주세요! (예: 30508 김지성) 🎒")
-        st.selectbox("어떤 장기를 보여줄 건가요? 🎤", ["춤 💃", "노래 🎵", "랩 🎤", "악기 연주 🎸", "기타 🤹‍♂️"])
-        st.text_area("공연할 곡 제목이나 간단한 설명을 적어주세요! 📝")
-        
-        # 알록달록한 제출 버튼
-        submitted = st.form_submit_button("✨ 신청서 날리기! 🚀")
-        
-        if submitted:
-            # 제출 버튼을 누르면 화면에 진짜 풍선이 날아갑니다! (초딩 감성 핵심)
-            st.balloons() 
-            st.success("우와! 신청이 완료되었어요! 🎉 (※ 지금은 UI 테스트 중입니다)")
+    st.divider()
+    # 홈 화면에 현재 진행 중인 행사 하이라이트
+    st.subheader("🔥 현재 진행 중인 행사")
+    st.success("**[진행 중]** 2026 강화고 e-체육대회 (상단 메뉴에서 확인하세요!)")
+
+elif menu == "🏆 체육대회":
+    # 분리해둔 체육대회 페이지 화면 불러오기
+    sports_festival.show_page()
+
+elif menu == "🎪 마리마당 축제":
+    st.title("🎪 마리마당 축제")
+    st.write("알록달록한 마리마당 축제 전용 페이지가 들어갈 자리입니다.")
+    # marimadang.show_page() # 나중에 이 주석을 풀고 연결합니다.
+
+elif menu == "📚 청람 학술제":
+    st.title("📚 청람 학술제")
+    st.write("지적이고 차분한 학술제 전용 페이지가 들어갈 자리입니다.")
+    # academic_fest.show_page() # 나중에 이 주석을 풀고 연결합니다.
+
+elif menu == "💡 행사 추천 및 설문":
+    st.title("💡 행사 추천 및 설문조사")
+    st.write("학생들의 의견을 수집하고 설문조사를 진행하는 공간입니다.")
