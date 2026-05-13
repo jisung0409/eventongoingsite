@@ -1,24 +1,24 @@
 import streamlit as st
 import datetime
 import pandas as pd
-from streamlit_gsheets import GSheetsConnection # [추가됨] 구글 시트 연결 라이브러리
+from streamlit_gsheets import GSheetsConnection
 
 # ==========================================
-# 🗄️ DB 통신 함수 (가장 핵심적인 변경점)
+# 🗄️ DB 통신 함수
 # ==========================================
 def initialize_data():
-    # 1. 구글 시트에서 데이터 읽어오기
     conn = st.connection("gsheets", type=GSheetsConnection)
-    
-    # ttl=0 옵션: 캐시(임시저장)를 쓰지 않고 항상 실시간으로 가장 최신 데이터를 시트에서 불러옵니다.
     df = conn.read(worksheet="체육대회_경기", ttl=0)
     
-    # 엑셀의 빈 칸(NaN)을 파이썬의 None으로 깔끔하게 변환
-    df = df.where(pd.notnull(df), None)
-
-    # 2. 읽어온 시트 데이터를 기존 코드(session_state) 형식에 맞게 변환
     matches = []
     for idx, row in df.iterrows():
+        # [버그 픽스] 구글 시트의 빈칸(NaN)이나 'nan' 텍스트를 완벽하게 걸러내는 로직
+        raw_winner = row['winner']
+        if pd.isna(raw_winner) or str(raw_winner).strip().lower() in ['nan', 'none', '']:
+            clean_winner = None
+        else:
+            clean_winner = raw_winner
+
         matches.append({
             "id": row['id'],
             "time": row['time'],
@@ -26,27 +26,23 @@ def initialize_data():
             "event": row['event'],
             "team_a": row['team_a'],
             "team_b": row['team_b'],
-            "winner": row['winner'],
+            "winner": clean_winner,
             "points": row['points']
         })
     st.session_state.matches = matches
 
 def update_winner_to_db(match_index, new_winner):
-    """관리자가 버튼을 눌렀을 때 구글 시트에 직접 값을 저장하는 함수"""
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="체육대회_경기", ttl=0)
     
-    # 데이터프레임의 해당 행(match_index), 'winner' 열의 값을 바꿈
-    df.at[match_index, 'winner'] = new_winner
+    # [버그 픽스] '선택 안함(None)'일 경우 구글 시트에 빈칸으로 저장되도록 처리
+    df.at[match_index, 'winner'] = "" if new_winner is None else new_winner
     
-    # 구글 시트에 변경된 데이터프레임을 덮어쓰기 (저장)
     conn.update(worksheet="체육대회_경기", data=df)
-    
-    # 캐시를 비워서 다른 접속자들도 즉시 바뀐 화면을 보게 만듦
     st.cache_data.clear()
 
 # ==========================================
-# 기존 로직 (상태 계산 등)
+# 상태 계산 및 UI 로직
 # ==========================================
 def get_match_status(match_time_str, winner):
     now = datetime.datetime.now().strftime("%H:%M")
@@ -64,17 +60,12 @@ def calculate_rankings(grade):
             scores[m["winner"]] = scores.get(m["winner"], 0) + m["points"]
     return sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
-# ==========================================
-# 화면 UI 그리기
-# ==========================================
 def show_page():
-    # 이제 하드코딩된 데이터가 아니라 구글 시트 데이터를 실시간으로 불러옵니다!
     initialize_data() 
     
     kiosk_mode = st.toggle("🖥️ 전광판 모드 (전체화면)", value=False)
     
     if kiosk_mode:
-        # [전광판 모드 UI - 기존과 100% 동일]
         st.markdown("""
             <style>
                 [data-testid="stSidebar"] {display: none;}
@@ -100,7 +91,6 @@ def show_page():
                     st.info(f"[{m['time']}] {m['grade']}학년 {m['event']}\n\n{m['team_a']} vs {m['team_b']}\n\n{status}")
         
     else:
-        # [일반(모바일) 모드 UI - 기존과 100% 동일]
         st.markdown("<h1 style='text-align: center; color: #1E90FF;'>🏆 2026 강화고 체육대회 🏆</h1>", unsafe_allow_html=True)
         
         tab_all, tab_1, tab_2, tab_3 = st.tabs(["🌐 전체 일정", "🐣 1학년", "🐥 2학년", "🦅 3학년"])
@@ -135,7 +125,7 @@ def show_page():
         st.divider()
         
         # ==========================================
-        # 🔐 운영진 전용 (여기가 DB 쓰기 핵심입니다!)
+        # 🔐 운영진 전용 
         # ==========================================
         if 'admin_logged_in' not in st.session_state:
             st.session_state.admin_logged_in = False
@@ -171,14 +161,10 @@ def show_page():
                     
                     new_winner = None if winner_choice == "선택 안함" else winner_choice
                     
-                    # [변경점] 관리자가 새로운 승리팀을 클릭한 순간!
                     if st.session_state.matches[i]["winner"] != new_winner:
-                        # 1. 화면 업데이트를 위해 세션 상태 변경
                         st.session_state.matches[i]["winner"] = new_winner
                         
-                        # 2. "진짜" 데이터베이스(구글 시트)에 값을 덮어쓰기
                         with st.spinner("구글 시트에 저장 중입니다..."):
                             update_winner_to_db(i, new_winner)
                         
-                        # 3. 화면 새로고침
                         st.rerun()
