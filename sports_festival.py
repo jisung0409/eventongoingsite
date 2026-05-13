@@ -8,7 +8,8 @@ from streamlit_gsheets import GSheetsConnection
 # ==========================================
 def initialize_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
-    df = conn.read(worksheet="체육대회_경기", ttl=0)
+    # [수정됨] ttl=0 에서 ttl="10m" (10분 캐싱)으로 변경!
+    df = conn.read(worksheet="체육대회_경기", ttl="10m")
     
     matches = []
     for idx, row in df.iterrows():
