@@ -110,21 +110,45 @@ def show_page():
 
         st.divider()
         # ==========================================
-        # ⚙️ 운영진 전용 결과 입력 창 (실제 DB 연결 전까지 사용)
+        # 🔐 운영진 전용 (관리자 로그인 시스템)
         # ==========================================
-        with st.expander("⚙️ 운영진 전용 결과 입력 (학생들에게는 비밀)"):
-            st.warning("이곳에서 승리 팀을 선택하면 전광판과 일반 모드의 점수가 즉시 변동됩니다.")
-            for i, m in enumerate(st.session_state.matches):
-                # 각 경기마다 승자를 고를 수 있는 라디오 버튼
-                winner_choice = st.radio(
-                    f"{m['grade']}학년 {m['event']} ({m['time']})",
-                    options=["선택 안함", m['team_a'], m['team_b']],
-                    index=0 if m['winner'] is None else (1 if m['winner'] == m['team_a'] else 2),
-                    key=f"match_{i}"
-                )
+        # 세션 상태에 관리자 로그인 여부 저장 (초기값은 False)
+        if 'admin_logged_in' not in st.session_state:
+            st.session_state.admin_logged_in = False
+
+        with st.expander("🔐 운영진 전용 (Staff Only)"):
+            # 1. 로그인이 안 되어 있을 때 (비밀번호 입력창 띄우기)
+            if not st.session_state.admin_logged_in:
+                admin_pw = st.text_input("관리자 암호를 입력하세요", type="password")
+                if st.button("접속"):
+                    if admin_pw == "0409": # 👈 여기에 원하는 비밀번호를 설정하세요 (현재 0409)
+                        st.session_state.admin_logged_in = True
+                        st.rerun() # 화면 새로고침하여 입력창 띄우기
+                    else:
+                        st.error("암호가 틀렸습니다. 접근 권한이 없습니다.")
+            
+            # 2. 로그인이 성공했을 때 (결과 입력창 띄우기)
+            else:
+                col1, col2 = st.columns([0.8, 0.2])
+                with col1:
+                    st.success("✅ 운영진 모드 활성화됨")
+                with col2:
+                    if st.button("로그아웃"):
+                        st.session_state.admin_logged_in = False
+                        st.rerun()
+
+                st.warning("이곳에서 승리 팀을 선택하면 전광판과 일반 모드의 점수가 즉시 변동됩니다.")
                 
-                # 라디오 버튼 선택 시 세션 상태 즉각 업데이트
-                new_winner = None if winner_choice == "선택 안함" else winner_choice
-                if st.session_state.matches[i]["winner"] != new_winner:
-                    st.session_state.matches[i]["winner"] = new_winner
-                    st.rerun() # 화면 새로고침하여 즉시 반영
+                # 기존 경기 결과 입력 로직
+                for i, m in enumerate(st.session_state.matches):
+                    winner_choice = st.radio(
+                        f"{m['grade']}학년 {m['event']} ({m['time']})",
+                        options=["선택 안함", m['team_a'], m['team_b']],
+                        index=0 if m['winner'] is None else (1 if m['winner'] == m['team_a'] else 2),
+                        key=f"match_{i}"
+                    )
+                    
+                    new_winner = None if winner_choice == "선택 안함" else winner_choice
+                    if st.session_state.matches[i]["winner"] != new_winner:
+                        st.session_state.matches[i]["winner"] = new_winner
+                        st.rerun()
