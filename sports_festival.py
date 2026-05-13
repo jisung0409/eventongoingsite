@@ -23,36 +23,6 @@ def show_page():
 
         k_tab_all, k_tab_1, k_tab_2, k_tab_3 = st.tabs(["🌐 종합 순위", "🐣 1학년", "🐥 2학년", "🦅 3학년"])
         
-        with k_tab_all:
-            st.markdown("<h1 style='text-align: center; font-size: 4rem; color: #1E90FF; margin-bottom: 0;'>⚡ LIVE SCOREBOARD ⚡</h1>", unsafe_allow_html=True)
-            
-            # 2. HTML/CSS를 활용한 압도적인 크기의 단상(Podium) 디자인
-            podium_html = """
-            <div style="display: flex; justify-content: center; align-items: flex-end; text-align: center; margin-top: 40px; gap: 15px;">
-                <!-- 2위 -->
-                <div style="background: #f8f9fa; border: 5px solid #C0C0C0; border-radius: 20px 20px 0 0; padding: 40px 20px; width: 30%; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
-                    <h2 style="margin:0; font-size: 3rem; color: #708090;">🥈 2위</h2>
-                    <h1 style="margin:15px 0; font-size: 4.5rem; color: #333;">3-8</h1>
-                    <p style="font-size: 2.5rem; margin:0; color: #666; font-weight: bold;">280점</p>
-                </div>
-                <!-- 1위 -->
-                <div style="background: #fffbea; border: 5px solid #FFD700; border-radius: 20px 20px 0 0; padding: 60px 20px; width: 35%; box-shadow: 0 15px 30px rgba(255,215,0,0.3); z-index: 10;">
-                    <h2 style="margin:0; font-size: 4rem; color: #FF8C00;">🥇 1위</h2>
-                    <h1 style="margin:20px 0; font-size: 6rem; color: #111;">3-5</h1>
-                    <p style="font-size: 3rem; margin:0; font-weight: bold; color: #d4af37;">350점</p>
-                </div>
-                <!-- 3위 -->
-                <div style="background: #f8f9fa; border: 5px solid #CD7F32; border-radius: 20px 20px 0 0; padding: 30px 20px; width: 30%; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
-                    <h2 style="margin:0; font-size: 2.5rem; color: #8B4513;">🥉 3위</h2>
-                    <h1 style="margin:10px 0; font-size: 4rem; color: #333;">2-4</h1>
-                    <p style="font-size: 2rem; margin:0; color: #666; font-weight: bold;">210점</p>
-                </div>
-            </div>
-            """
-            st.markdown(podium_html, unsafe_allow_html=True)
-            
-            st.markdown("<br><h2 style='text-align: center; font-size: 2.5rem;'>📢 다음 경기: 15:30 [농구 결승] 2-1 vs 2-4</h2>", unsafe_allow_html=True)
-
         with k_tab_1:
             st.markdown("<h1 style='text-align: center; font-size: 4rem; color: #FFD700; margin-top: 50px;'>🐣 1학년 경기 현황</h1>", unsafe_allow_html=True)
             st.markdown("<h2 style='text-align: center; font-size: 3rem;'>🔥 피구/발야구 예선 진행 중!</h2>", unsafe_allow_html=True)
