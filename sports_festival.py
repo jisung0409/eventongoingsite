@@ -21,7 +21,7 @@ def show_page():
             </style>
         """, unsafe_allow_html=True)
 
-        k_tab_all, k_tab_1, k_tab_2, k_tab_3 = st.tabs(["🌐 종합 순위", "🐣 1학년", "🐥 2학년", "🦅 3학년"])
+        k_tab_1, k_tab_2, k_tab_3 = st.tabs(["🐣 1학년", "🐥 2학년", "🦅 3학년"])
         
         with k_tab_1:
             st.markdown("<h1 style='text-align: center; font-size: 4rem; color: #FFD700; margin-top: 50px;'>🐣 1학년 경기 현황</h1>", unsafe_allow_html=True)
