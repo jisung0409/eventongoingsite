@@ -1,6 +1,8 @@
 import streamlit as st
 import sports_festival 
 import academic_fest
+import survey
+
 
 # 1. 웹앱 기본 설정
 st.set_page_config(
@@ -87,5 +89,4 @@ elif menu == "📚 청람 학술제":
     academic_fest.show_page()
 
 elif menu == "💡 행사 추천 및 설문":
-    st.title("💡 행사 추천 및 설문조사")
-    st.write("학생들의 의견을 수집하고 설문조사를 진행하는 공간입니다.")
+    survey.show_page()
