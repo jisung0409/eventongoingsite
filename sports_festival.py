@@ -64,16 +64,19 @@ def calculate_rankings(grade):
 def show_page():
     initialize_data() 
     
-    kiosk_mode = st.toggle("🖥️ 전광판 모드 (전체화면)", value=False)
+    # [새로 추가됨] 우측 상단 'Running...' 로딩 위젯 아예 숨기기
+    st.markdown("""
+        <style>
+            [data-testid="stStatusWidget"] {
+                visibility: hidden;
+                height: 0%;
+                position: fixed;
+            }
+        </style>
+    """, unsafe_allow_html=True)
     
-    if kiosk_mode:
-        st.markdown("""
-            <style>
-                [data-testid="stSidebar"] {display: none;}
-                .block-container {padding-top: 1rem; padding-bottom: 0rem; max-width: 100%;}
-                header {visibility: hidden;}
-            </style>
-        """, unsafe_allow_html=True)
+    kiosk_mode = st.toggle("🖥️ 전광판 모드 (전체화면)", value=False)
+    # ... (아래 코드는 기존과 동일) ...
 
         st.markdown("<h1 style='text-align: center; font-size: 3rem; color: #1E90FF;'>⚡ 2026 강화고 체육대회 LIVE ⚡</h1>", unsafe_allow_html=True)
         st.markdown("<h2 style='text-align: center; margin-top: 30px;'>🎯 경기 실시간 상황</h2>", unsafe_allow_html=True)
