@@ -9,7 +9,7 @@ from streamlit_gsheets import GSheetsConnection
 def initialize_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
     # [수정됨] ttl=0 에서 ttl="10m" (10분 캐싱)으로 변경!
-    df = conn.read(worksheet="체육대회_경기", ttl="10m")
+    df = conn.read(worksheet="체육대회_경기", ttl="10m") 
     
     matches = []
     for idx, row in df.iterrows():
@@ -65,7 +65,7 @@ def show_page():
     initialize_data() 
     
     # [새로 추가됨] 우측 상단 'Running...' 로딩 위젯 아예 숨기기
-    st.markdown("""
+   st.markdown("""
         <style>
             [data-testid="stStatusWidget"] {
                 visibility: hidden;
@@ -76,7 +76,6 @@ def show_page():
     """, unsafe_allow_html=True)
     
     kiosk_mode = st.toggle("🖥️ 전광판 모드 (전체화면)", value=False)
-    # ... (아래 코드는 기존과 동일) ...
 
         st.markdown("<h1 style='text-align: center; font-size: 3rem; color: #1E90FF;'>⚡ 2026 강화고 체육대회 LIVE ⚡</h1>", unsafe_allow_html=True)
         st.markdown("<h2 style='text-align: center; margin-top: 30px;'>🎯 경기 실시간 상황</h2>", unsafe_allow_html=True)
