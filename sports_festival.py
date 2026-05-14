@@ -102,12 +102,14 @@ def display_grade_kiosk(g_idx):
             if m["grade"] == g_idx:
                 has_matches = True
                 status = get_match_status(m["time"], m["winner"])
+                
+                # [오류 해결됨] unsafe_allow_html=True를 제거하고 순수 마크다운으로 깔끔하고 크게 수정했습니다.
                 if "진행 중" in status:
-                    st.error(f"<div style='font-size:1.5rem;'>⏰ {m['time']} | {m['event']}</div><div style='font-size:2.5rem; font-weight:bold; text-align:center;'>{m['team_a']} <span style='color:red;'>VS</span> {m['team_b']}</div><div style='font-size:1.5rem; text-align:right;'>{status}</div>", unsafe_allow_html=True)
+                    st.error(f"⏰ **{m['time']} | {m['event']}**\n\n## {m['team_a']} VS {m['team_b']}\n\n**{status}**")
                 elif "종료" in status:
-                    st.success(f"<div style='font-size:1.5rem;'>✅ {m['time']} | {m['event']}</div><div style='font-size:2rem; text-align:center;'>{status}</div>", unsafe_allow_html=True)
+                    st.success(f"✅ **{m['time']} | {m['event']}**\n\n## {status}")
                 else:
-                    st.warning(f"<div style='font-size:1.5rem;'>⏳ {m['time']} | {m['event']}</div><div style='font-size:2rem; text-align:center;'>{m['team_a']} vs {m['team_b']}</div>", unsafe_allow_html=True)
+                    st.warning(f"⏳ **{m['time']} | {m['event']}**\n\n## {m['team_a']} vs {m['team_b']}")
         
         if not has_matches:
             st.write("예정된 경기가 없습니다.")
@@ -118,17 +120,14 @@ def display_grade_kiosk(g_idx):
 def show_page():
     initialize_data() 
     
-    # 1. 로딩 창 숨기기 & 일정표 글씨가 안 깨지게 만드는 전역 CSS
     st.markdown("""
         <style>
             [data-testid="stStatusWidget"] {visibility: hidden; height: 0%; position: fixed;}
-            /* st.table 로 출력되는 시간표의 글씨 크기를 키우고, 줄바꿈을 방지하여 깔끔하게 표시 */
             .stTable td { font-size: 1rem !important; white-space: nowrap; }
             .stTable th { font-size: 1.1rem !important; background-color: #f0f2f6; }
         </style>
     """, unsafe_allow_html=True)
     
-    # 2. 전광판 모드 켜기/끄기 토글
     kiosk_mode = st.toggle("🖥️ 전광판 모드 (전체화면)", value=False)
     
     if kiosk_mode:
@@ -137,7 +136,6 @@ def show_page():
                 [data-testid="stSidebar"] {display: none;}
                 .block-container {padding-top: 1rem; padding-bottom: 0rem; max-width: 100%;}
                 header {visibility: hidden;}
-                /* 전광판 모드일 때만 탭 글씨 크기를 거대하게 키움 */
                 .stTabs [data-baseweb='tab-list'] button {font-size: 1.8rem; font-weight: bold;}
             </style>
         """, unsafe_allow_html=True)
@@ -150,9 +148,6 @@ def show_page():
                 display_grade_kiosk(i)
                 
     else:
-        # ==========================================
-        # 일반 모드 (모바일 학생용)
-        # ==========================================
         st.markdown("<h1 style='text-align: center; color: #1E90FF;'>🏆 2026 강화고 체육대회 🏆</h1>", unsafe_allow_html=True)
         
         tab_all, tab_1, tab_2, tab_3 = st.tabs(["🌐 전체 일정", "🐣 1학년", "🐥 2학년", "🦅 3학년"])
@@ -164,7 +159,6 @@ def show_page():
                 "종목": ["개회식 및 생활안전교육, 준비운동", "1학년 축구 결승 / 2학년 농구 결승", "2학년 축구 결승 / 3학년 농구 결승", "줄다리기 예선", "3학년 축구 결승 / 1학년 농구 결승", "점심시간 🍱", "이벤트 경기 - 장애물 달리기, 줄다리기", "8자 줄넘기, 2단 뛰기(쌩쌩이)", "이벤트 경기 - 학부모 교직원 줄다리기", "줄다리기 결승", "사제 간 경기 (축구)", "계주 예선, 결승", "성적발표, 시상식 및 폐회식", "정리 및 대청소", "2026학년도 읽걷쓰AI 선언식"],
                 "참가대상": ["전교생", "1, 2학년", "2, 3학년", "1, 2, 3학년", "1, 3학년", "1, 2, 3학년", "교직원", "1, 2, 3학년", "학부모, 교직원", "1, 2, 3학년", "교직원 vs 학생회", "1, 2, 3학년", "전교생", "전교생", "희망자"]
             }
-            # 스크롤바가 생기지 않도록 st.dataframe 대신 st.table을 사용합니다.
             st.table(pd.DataFrame(schedule_data))
 
         for g_idx, tab in enumerate([tab_1, tab_2, tab_3], start=1):
