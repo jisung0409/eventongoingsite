@@ -15,9 +15,9 @@ def initialize_data():
 
     matches = []
     extra_events = {
-        1: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None},
-        2: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None},
-        3: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None}
+        1: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "쌩쌩이 줄넘기 1등": None},
+        2: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "쌩쌩이 줄넘기 1등": None},
+        3: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "쌩쌩이 줄넘기 1등": None}
     }
     
     for idx, row in df.iterrows():
@@ -35,7 +35,7 @@ def initialize_data():
         except (ValueError, TypeError):
             grade_val = 0
         
-        if event_str in ["계주 1등", "계주 2등", "줄다리기 1등", "8자 줄넘기 1등", "일반 줄넘기 1등"] and grade_val in [1, 2, 3]:
+        if event_str in ["계주 1등", "계주 2등", "줄다리기 1등", "8자 줄넘기 1등", "쌩쌩이 줄넘기 1등"] and grade_val in [1, 2, 3]:
             extra_events[grade_val][event_str] = clean_winner
         else:
             if "줄다리기" in event_str and grade_val == 3 and row['id'] == 7:
