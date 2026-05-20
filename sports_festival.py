@@ -10,6 +10,10 @@ def initialize_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="체육대회_경기", ttl="10m")
     
+    # [방어 코드] 만약 구글 시트가 텅 비어서 winner 열을 인식 못했을 경우 열을 생성
+    if 'winner' not in df.columns:
+        df['winner'] = None
+
     matches = []
     for idx, row in df.iterrows():
         raw_winner = row['winner']
@@ -34,7 +38,13 @@ def update_winner_to_db(match_index, new_winner):
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="체육대회_경기", ttl=0)
     
-    df.at[match_index, 'winner'] = "" if new_winner is None else new_winner
+    # [버그 해결 핵심] winner 열을 강제로 문자열 수용 가능(object) 타입으로 변환
+    if 'winner' not in df.columns:
+        df['winner'] = None
+    df['winner'] = df['winner'].astype(object)
+    
+    # .at 대신 좀 더 안정적인 .loc 사용
+    df.loc[match_index, 'winner'] = "" if new_winner is None else new_winner
     
     conn.update(worksheet="체육대회_경기", data=df)
     st.cache_data.clear()
@@ -103,7 +113,6 @@ def display_grade_kiosk(g_idx):
                 has_matches = True
                 status = get_match_status(m["time"], m["winner"])
                 
-                # [오류 해결됨] unsafe_allow_html=True를 제거하고 순수 마크다운으로 깔끔하고 크게 수정했습니다.
                 if "진행 중" in status:
                     st.error(f"⏰ **{m['time']} | {m['event']}**\n\n## {m['team_a']} VS {m['team_b']}\n\n**{status}**")
                 elif "종료" in status:
