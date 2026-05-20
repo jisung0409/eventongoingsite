@@ -14,10 +14,11 @@ def initialize_data():
         df['winner'] = None
 
     matches = []
+    # [수정됨] 일반 줄넘기 -> 쌩쌩이 줄넘기 1등으로 변경
     extra_events = {
-        1: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None},
-        2: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None},
-        3: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None}
+        1: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "쌩쌩이 줄넘기 1등": None},
+        2: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "쌩쌩이 줄넘기 1등": None},
+        3: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "쌩쌩이 줄넘기 1등": None}
     }
     
     for idx, row in df.iterrows():
@@ -29,13 +30,12 @@ def initialize_data():
 
         event_str = str(row['event']).strip()
         
-        # [버그 픽스] 단일 숫자(스칼라) 값에 대한 안전한 정수 변환 로직으로 교체
         try:
             grade_val = int(float(row['grade']))
         except (ValueError, TypeError):
             grade_val = 0
         
-        if event_str in ["계주 1등", "계주 2등", "줄다리기 1등", "8자 줄넘기 1등", "일반 줄넘기 1등"] and grade_val in [1, 2, 3]:
+        if event_str in ["계주 1등", "계주 2등", "줄다리기 1등", "8자 줄넘기 1등", "쌩쌩이 줄넘기 1등"] and grade_val in [1, 2, 3]:
             extra_events[grade_val][event_str] = clean_winner
         else:
             if "줄다리기" in event_str and grade_val == 3 and row['id'] == 7:
@@ -135,8 +135,8 @@ def calculate_rankings(grade):
             add_achievement(events["줄다리기 1등"], "줄다리기 1등", is_win=True)
         if events.get("8자 줄넘기 1등"):
             add_achievement(events["8자 줄넘기 1등"], "8자 줄넘기 1등", is_win=True)
-        if events.get("일반 줄넘기 1등"):
-            add_achievement(events["일반 줄넘기 1등"], "일반 줄넘기 1등", is_win=True)
+        if events.get("쌩쌩이 줄넘기 1등"):
+            add_achievement(events["쌩쌩이 줄넘기 1등"], "쌩쌩이 1등", is_win=True)
 
     return sorted(team_stats.items(), key=lambda x: x[1]["wins"], reverse=True)
 
@@ -162,7 +162,7 @@ def display_integrated_kiosk():
                 lines.append("🏃 계주 ➔ <span style='color:#888;'>결과 대기 중</span>")
                 
             lines.append(f" rope 8자 ➔ <b>{events['8자 줄넘기 1등'] if events['8자 줄넘기 1등'] else '--'}</b>")
-            lines.append(f"⏱️ 일반 ➔ <b>{events['일반 줄넘기 1등'] if events['일반 줄넘기 1등'] else '--'}</b>")
+            lines.append(f"⏱️ 쌩쌩이 ➔ <b>{events['쌩쌩이 줄넘기 1등'] if events['쌩쌩이 줄넘기 1등'] else '--'}</b>")
             lines.append(f"💪 줄다리기 ➔ <b>{events['줄다리기 1등'] if events['줄다리기 1등'] else '--'}</b>")
             
             content_html = "<br>".join(lines)
@@ -325,10 +325,13 @@ def show_page():
                     
                     new_winner = None if winner_choice == "선택 안함" else winner_choice
                     if st.session_state.matches[i]["winner"] != new_winner:
-                        st.session_state.matches[i]["winner"] = new_winner
-                        with st.spinner("구글 시트에 저장 중..."):
-                            update_winner_to_db(i, new_winner)
-                        st.rerun()
+                        try:
+                            st.session_state.matches[i]["winner"] = new_winner
+                            with st.spinner("구글 시트에 저장 중..."):
+                                update_winner_to_db(i, new_winner)
+                            st.rerun()
+                        except Exception:
+                            st.error("⚠️ 구글 서버 통신량 초과! (잠시 후 다시 선택해주세요)")
                 
                 st.write("---")
                 st.subheader("📊 학년별 점수제/기록제 종목 결과 입력")
@@ -348,31 +351,54 @@ def show_page():
                         sel_2nd = st.selectbox(f"{g}학년 계주 2등", options=class_options, index=idx_2nd, key=f"relay_2nd_{g}")
                         
                     if current_events["계주 1등"] != (None if sel_1st == "선택 안함" else sel_1st):
-                        update_extra_event_to_db(g, "계주 1등", None if sel_1st == "선택 안함" else sel_1st)
-                        st.rerun()
+                        try:
+                            with st.spinner("저장 중..."):
+                                update_extra_event_to_db(g, "계주 1등", None if sel_1st == "선택 안함" else sel_1st)
+                            st.rerun()
+                        except Exception:
+                            st.error("⚠️ 구글 서버 통신량 초과! 천천히 변경해주세요.")
+                            
                     if current_events["계주 2등"] != (None if sel_2nd == "선택 안함" else sel_2nd):
-                        update_extra_event_to_db(g, "계주 2등", None if sel_2nd == "선택 안함" else sel_2nd)
-                        st.rerun()
+                        try:
+                            with st.spinner("저장 중..."):
+                                update_extra_event_to_db(g, "계주 2등", None if sel_2nd == "선택 안함" else sel_2nd)
+                            st.rerun()
+                        except Exception:
+                            st.error("⚠️ 구글 서버 통신량 초과! 천천히 변경해주세요.")
                         
                     c3, c4, c5 = st.columns(3)
                     idx_tug = class_options.index(current_events["줄다리기 1등"]) if current_events["줄다리기 1등"] in class_options else 0
                     idx_rope8 = class_options.index(current_events["8자 줄넘기 1등"]) if current_events["8자 줄넘기 1등"] in class_options else 0
-                    idx_ropesg = class_options.index(current_events["일반 줄넘기 1등"]) if current_events["일반 줄넘기 1등"] in class_options else 0
+                    idx_ropesg = class_options.index(current_events["쌩쌩이 줄넘기 1등"]) if current_events["쌩쌩이 줄넘기 1등"] in class_options else 0
                     
                     with c3:
                         sel_tug = st.selectbox(f"{g}학년 줄다리기 1등", options=class_options, index=idx_tug, key=f"tug_{g}")
                     with c4:
                         sel_rope8 = st.selectbox(f"{g}학년 8자 줄넘기 1등", options=class_options, index=idx_rope8, key=f"rope8_{g}")
                     with c5:
-                        sel_ropesg = st.selectbox(f"{g}학년 일반 줄넘기 1등", options=class_options, index=idx_ropesg, key=f"ropesg_{g}")
+                        sel_ropesg = st.selectbox(f"{g}학년 쌩쌩이 줄넘기 1등", options=class_options, index=idx_ropesg, key=f"ropesg_{g}")
                         
                     if current_events["줄다리기 1등"] != (None if sel_tug == "선택 안함" else sel_tug):
-                        update_extra_event_to_db(g, "줄다리기 1등", None if sel_tug == "선택 안함" else sel_tug)
-                        st.rerun()
+                        try:
+                            with st.spinner("저장 중..."):
+                                update_extra_event_to_db(g, "줄다리기 1등", None if sel_tug == "선택 안함" else sel_tug)
+                            st.rerun()
+                        except Exception:
+                            st.error("⚠️ 구글 서버 통신량 초과! 천천히 변경해주세요.")
+                            
                     if current_events["8자 줄넘기 1등"] != (None if sel_rope8 == "선택 안함" else sel_rope8):
-                        update_extra_event_to_db(g, "8자 줄넘기 1등", None if sel_rope8 == "선택 안함" else sel_rope8)
-                        st.rerun()
-                    if current_events["일반 줄넘기 1등"] != (None if sel_ropesg == "선택 안함" else sel_ropesg):
-                        update_extra_event_to_db(g, "일반 줄넘기 1등", None if sel_ropesg == "선택 안함" else sel_ropesg)
-                        st.rerun()
+                        try:
+                            with st.spinner("저장 중..."):
+                                update_extra_event_to_db(g, "8자 줄넘기 1등", None if sel_rope8 == "선택 안함" else sel_rope8)
+                            st.rerun()
+                        except Exception:
+                            st.error("⚠️ 구글 서버 통신량 초과! 천천히 변경해주세요.")
+                            
+                    if current_events["쌩쌩이 줄넘기 1등"] != (None if sel_ropesg == "선택 안함" else sel_ropesg):
+                        try:
+                            with st.spinner("저장 중..."):
+                                update_extra_event_to_db(g, "쌩쌩이 줄넘기 1등", None if sel_ropesg == "선택 안함" else sel_ropesg)
+                            st.rerun()
+                        except Exception:
+                            st.error("⚠️ 구글 서버 통신량 초과! 천천히 변경해주세요.")
                     st.write("")
