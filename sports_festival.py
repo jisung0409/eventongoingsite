@@ -295,9 +295,9 @@ def show_page():
                         st.session_state.admin_logged_in = False
                         st.rerun()
 
-                st.warning("아래에서 결과를 모두 수정한 뒤, 맨 밑의 **[💾 전체 저장하기]** 버튼을 눌러야 시트에 반영됩니다.")
+                # [텍스트 수정됨] 현장 상황에 맞게 안내 문구 변경
+                st.info("💡 **운영 꿀팁:** 경기가 하나 끝날 때마다 결과를 선택하고, 맨 아래의 **[💾 실시간 결과 전광판에 반영하기]** 버튼을 누르시면 됩니다!")
                 
-                # [핵심] st.form 을 사용하여 입력값들을 한 번에 모음
                 with st.form("admin_bulk_update_form"):
                     
                     st.subheader("🎯 토너먼트 종목 결과 입력")
@@ -339,11 +339,10 @@ def show_page():
                         extra_inputs.append({"grade": g, "event": "쌩쌩이 줄넘기 1등", "val": v_ropesg})
                         st.write("")
 
-                    # 저장 버튼
-                    submitted = st.form_submit_button("💾 전체 저장하기 (구글 시트 전송)", use_container_width=True)
+                    # [텍스트 수정됨] 버튼을 더 직관적이고 크게 변경
+                    submitted = st.form_submit_button("💾 방금 선택한 결과 전광판에 즉시 반영하기", use_container_width=True)
                     
                     if submitted:
-                        # 1. 딕셔너리 형태로 데이터 취합
                         final_matches = {}
                         for mi in match_inputs:
                             final_matches[mi["id"]] = None if mi["val"] == "선택 안함" else mi["val"]
@@ -352,11 +351,10 @@ def show_page():
                         for ei in extra_inputs:
                             final_extras[(ei["grade"], ei["event"])] = None if ei["val"] == "선택 안함" else ei["val"]
                             
-                        # 2. 일괄 전송 (에러 방어)
                         try:
-                            with st.spinner("구글 시트에 모든 결과를 한 번에 저장 중입니다..."):
+                            with st.spinner("구글 시트에 안전하게 기록 중입니다..."):
                                 bulk_update_db(final_matches, final_extras)
-                            st.success("✅ 모든 결과가 성공적으로 저장되었습니다!")
+                            st.success("✅ 전광판 업데이트 완료! 현장에 바로 반영되었습니다.")
                             st.rerun()
                         except Exception as e:
-                            st.error(f"⚠️ 구글 서버 통신 오류! 잠시 후 다시 시도해주세요. (상세: {e})")
+                            st.error(f"⚠️ 구글 서버 통신 오류! 잠시 후 버튼을 다시 눌러주세요. (상세: {e})")
