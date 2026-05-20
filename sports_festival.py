@@ -93,7 +93,15 @@ def bulk_update_db(match_changes, extra_changes):
 # 상태 및 성적 수집 로직
 # ==========================================
 def get_match_status(match_time_str, winner):
-    now = datetime.datetime.now().strftime("%H:%M")
+    # 1. 서버 위치에 상관없이 무조건 한국 시간(UTC+9)으로 고정
+    KST = datetime.timezone(datetime.timedelta(hours=9))
+    now = datetime.datetime.now(KST).strftime("%H:%M")
+    
+    # 2. 구글 시트에 "9:00"처럼 적혀있으면 "09:00"으로 강제 변환 (문자열 비교 오류 방어)
+    match_time_str = str(match_time_str).strip()
+    if len(match_time_str) == 4 and match_time_str[1] == ":":
+        match_time_str = "0" + match_time_str
+
     if winner:
         return f"✅ 종료 ({winner} 승리)"
     elif now >= match_time_str:
