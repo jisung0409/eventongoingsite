@@ -36,7 +36,7 @@ def initialize_data():
             matches.append({
                 "id": row['id'],
                 "time": row['time'],
-                "grade": row['grade'],
+                "grade": int(float(row['grade'])),
                 "event": row['event'],
                 "team_a": row['team_a'],
                 "team_b": row['team_b'],
@@ -69,12 +69,16 @@ def update_relay_to_db(grade, rank_type, new_winner):
         df['winner'] = None
     df['winner'] = df['winner'].astype(object)
     
+    # [버그 픽스] 학년 데이터를 정수로 강제 통일하여 시트 매칭 오류 방지
+    df['grade'] = pd.to_numeric(df['grade'], errors='coerce').fillna(0).astype(int)
+    
     event_name = f"계주 {rank_type}"
     condition = (df['grade'] == grade) & (df['event'] == event_name)
     
     if condition.any():
         df.loc[condition, 'winner'] = "" if new_winner is None else new_winner
     else:
+        # 시트에 계주 관련 행이 아예 없으면 여기서 알아서 엑셀 줄을 만들어줍니다!
         new_id = int(df['id'].max()) + 1 if not df['id'].empty else 1
         new_row = {
             "id": new_id,
@@ -128,13 +132,10 @@ def calculate_rankings(grade):
 # 전광판 화면 구성 헬퍼 함수
 # ==========================================
 def display_integrated_kiosk():
-    # [변경됨] 상단 여백을 대폭 줄이고 텍스트 크기를 화면에 딱 맞게 조정했습니다.
     st.markdown("<h1 style='text-align: center; font-size: 3rem; color: #1E90FF; margin-top: -30px; margin-bottom: 20px;'>⚡ 강화고 체육대회 통합 LIVE ⚡</h1>", unsafe_allow_html=True)
     
-    # [핵심] 화면을 1:2.5 비율로 나누어 왼쪽엔 계주, 오른쪽엔 매치업을 배치합니다.
     col_relay, col_matches = st.columns([1, 2.5])
     
-    # --- 왼쪽: 학년별 계주 현황 ---
     with col_relay:
         st.markdown("<h3 style='text-align: center; margin-top: 0;'>🏃 계주 결과</h3>", unsafe_allow_html=True)
         for g in [1, 2, 3]:
@@ -148,10 +149,8 @@ def display_integrated_kiosk():
                 res_html = "<span style='color: #888;'>⏳ 결과 대기 중</span>"
             st.markdown(f"<div style='background-color: #f0f2f6; padding: 12px; border-radius: 12px; text-align: center; font-size: 1.1rem; margin-bottom: 15px; border: 2px solid #d1d5db;'>🏅 <b>{g}학년</b><br><div style='margin-top:5px;'>{res_html}</div></div>", unsafe_allow_html=True)
             
-    # --- 오른쪽: 토너먼트 매치업 현황 ---
     with col_matches:
         st.markdown("<h3 style='text-align: center; margin-top: 0;'>🎯 실시간 매치업 현황</h3>", unsafe_allow_html=True)
-        # 오른쪽 영역 안에서 다시 3열로 나누어 공간을 100% 활용합니다.
         m_cols = st.columns(3)
         for i, m in enumerate(st.session_state.matches):
             status = get_match_status(m["time"], m["winner"])
@@ -321,4 +320,24 @@ def show_page():
                     current_1st = st.session_state.relay_data[g]["1등"]
                     current_2nd = st.session_state.relay_data[g]["2등"]
                     
-                    idx_1st = class_options.index
+                    idx_1st = class_options.index(current_1st) if current_1st in class_options else 0
+                    idx_2nd = class_options.index(current_2nd) if current_2nd in class_options else 0
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        sel_1st = st.selectbox(f"{g}학년 계주 1등 반", options=class_options, index=idx_1st, key=f"relay_1st_{g}")
+                    with c2:
+                        sel_2nd = st.selectbox(f"{g}학년 계주 2등 반", options=class_options, index=idx_2nd, key=f"relay_2nd_{g}")
+                        
+                    new_1st = None if sel_1st == "선택 안함" else sel_1st
+                    new_2nd = None if sel_2nd == "선택 안함" else sel_2nd
+                    
+                    if current_1st != new_1st:
+                        with st.spinner(f"{g}학년 계주 1등 저장 중..."):
+                            update_relay_to_db(g, "1등", new_1st)
+                        st.rerun()
+                        
+                    if current_2nd != new_2nd:
+                        with st.spinner(f"{g}학년 계주 2등 저장 중..."):
+                            update_relay_to_db(g, "2등", new_2nd)
+                        st.rerun()
