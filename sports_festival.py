@@ -14,7 +14,6 @@ def initialize_data():
         df['winner'] = None
 
     matches = []
-    # 학년별 동적 기록 종목 저장소 초기화
     extra_events = {
         1: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None},
         2: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None},
@@ -29,19 +28,22 @@ def initialize_data():
             clean_winner = raw_winner
 
         event_str = str(row['event']).strip()
-        grade_val = int(pd.to_numeric(row['grade'], errors='coerce').fillna(0))
         
-        # 추가된 점수제/기록제 종목 분리 플래그
+        # [버그 픽스] 단일 숫자(스칼라) 값에 대한 안전한 정수 변환 로직으로 교체
+        try:
+            grade_val = int(float(row['grade']))
+        except (ValueError, TypeError):
+            grade_val = 0
+        
         if event_str in ["계주 1등", "계주 2등", "줄다리기 1등", "8자 줄넘기 1등", "일반 줄넘기 1등"] and grade_val in [1, 2, 3]:
             extra_events[grade_val][event_str] = clean_winner
         else:
-            # 기존 하드코딩된 줄다리기 행(id 7번)이 있다면 중복 방지를 위해 제외
             if "줄다리기" in event_str and grade_val == 3 and row['id'] == 7:
                 continue
             matches.append({
                 "id": row['id'],
                 "time": row['time'],
-                "grade": int(float(row['grade'])),
+                "grade": grade_val,
                 "event": row['event'],
                 "team_a": row['team_a'],
                 "team_b": row['team_b'],
@@ -67,7 +69,6 @@ def update_winner_to_db(match_index, new_winner):
     st.cache_data.clear()
 
 def update_extra_event_to_db(grade, event_name, new_winner):
-    """모든 기록형 종목(계주, 줄다리기, 줄넘기)의 결과를 구글 시트에 동적 기록하는 범용 함수"""
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="체육대회_경기", ttl=0)
     
@@ -98,7 +99,7 @@ def update_extra_event_to_db(grade, event_name, new_winner):
     st.cache_data.clear()
 
 # ==========================================
-# 상태 및 다승제 기반 성적 수집 로직
+# 상태 및 성적 수집 로직
 # ==========================================
 def get_match_status(match_time_str, winner):
     now = datetime.datetime.now().strftime("%H:%M")
@@ -110,7 +111,6 @@ def get_match_status(match_time_str, winner):
         return "⏳ 예정"
 
 def calculate_rankings(grade):
-    """각 반이 거둔 모든 성적 상세 정보를 수집하여 다승 순으로 정렬합니다."""
     team_stats = {}
     
     def add_achievement(team, record_text, is_win=True):
@@ -120,19 +120,16 @@ def calculate_rankings(grade):
             team_stats[team]["wins"] += 1
         team_stats[team]["achievements"].append(record_text)
 
-    # 1. 토너먼트 경기 결과 반영 (+1승)
     for m in st.session_state.matches:
         if m["grade"] == grade and m["winner"]:
             add_achievement(m["winner"], f"{m['event']} 우승", is_win=True)
             
-    # 2. 기록제/점수제 종목 결과 반영
     if 'extra_events' in st.session_state and grade in st.session_state.extra_events:
         events = st.session_state.extra_events[grade]
         
         if events.get("계주 1등"):
             add_achievement(events["계주 1등"], "계주 1등", is_win=True)
         if events.get("계주 2등"):
-            # 계주 2등은 순위 예측 서술에는 포함하되, 승수(+1승)에는 반영하지 않음
             add_achievement(events["계주 2등"], "계주 2등", is_win=False)
         if events.get("줄다리기 1등"):
             add_achievement(events["줄다리기 1등"], "줄다리기 1등", is_win=True)
@@ -151,7 +148,6 @@ def display_integrated_kiosk():
     
     col_relay, col_matches = st.columns([1.2, 2.3])
     
-    # --- 왼쪽 영역: 기록제 종목 종합 리포트 ---
     with col_relay:
         st.markdown("<h3 style='text-align: center; margin-top: 0;'>📊 학년별 주요 기록</h3>", unsafe_allow_html=True)
         for g in [1, 2, 3]:
@@ -172,7 +168,6 @@ def display_integrated_kiosk():
             content_html = "<br>".join(lines)
             st.markdown(f"<div style='background-color: #f0f2f6; padding: 12px; border-radius: 12px; font-size: 1rem; margin-bottom: 12px; border: 2px solid #d1d5db;'>🏅 <b style='font-size:1.1rem;'>{g}학년 종합 결과</b><br><div style='margin-top:8px; line-height: 1.6;'>{content_html}</div></div>", unsafe_allow_html=True)
             
-    # --- 오른쪽 영역: 토너먼트 매치업 현황 ---
     with col_matches:
         st.markdown("<h3 style='text-align: center; margin-top: 0;'>🎯 실시간 매치업 현황</h3>", unsafe_allow_html=True)
         m_cols = st.columns(3)
@@ -195,7 +190,6 @@ def display_grade_kiosk(g_idx):
         rankings = calculate_rankings(g_idx)
         if rankings:
             for i, (team, stats) in enumerate(rankings):
-                # 반이 획득한 모든 세부 성적을 하나의 문자열로 연결
                 achievements_str = ", ".join(stats["achievements"])
                 
                 if i == 0:
@@ -336,7 +330,6 @@ def show_page():
                             update_winner_to_db(i, new_winner)
                         st.rerun()
                 
-                # --- 확장된 학년별 기록제 종목 입력 UI ---
                 st.write("---")
                 st.subheader("📊 학년별 점수제/기록제 종목 결과 입력")
                 class_options = ["선택 안함"] + [f"{i}반" for i in range(1, 9)]
@@ -345,7 +338,6 @@ def show_page():
                     st.markdown(f"#### 💡 **{g}학년 세부 기록 설정**")
                     current_events = st.session_state.extra_events[g]
                     
-                    # 1행: 계주 결과 입력
                     c1, c2 = st.columns(2)
                     idx_1st = class_options.index(current_events["계주 1등"]) if current_events["계주 1등"] in class_options else 0
                     idx_2nd = class_options.index(current_events["계주 2등"]) if current_events["계주 2등"] in class_options else 0
@@ -362,7 +354,6 @@ def show_page():
                         update_extra_event_to_db(g, "계주 2등", None if sel_2nd == "선택 안함" else sel_2nd)
                         st.rerun()
                         
-                    # 2행: 줄다리기 및 줄넘기 결과 입력
                     c3, c4, c5 = st.columns(3)
                     idx_tug = class_options.index(current_events["줄다리기 1등"]) if current_events["줄다리기 1등"] in class_options else 0
                     idx_rope8 = class_options.index(current_events["8자 줄넘기 1등"]) if current_events["8자 줄넘기 1등"] in class_options else 0
