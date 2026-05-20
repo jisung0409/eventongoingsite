@@ -92,7 +92,7 @@ def update_relay_to_db(grade, rank_type, new_winner):
     st.cache_data.clear()
 
 # ==========================================
-# 상태 및 [변경됨] 우승 종목 수집 로직
+# 상태 및 우승 종목 수집 로직
 # ==========================================
 def get_match_status(match_time_str, winner):
     now = datetime.datetime.now().strftime("%H:%M")
@@ -104,19 +104,16 @@ def get_match_status(match_time_str, winner):
         return "⏳ 예정"
 
 def calculate_rankings(grade):
-    """승리 횟수뿐만 아니라, 이긴 종목의 이름들을 모두 수집하여 반환합니다."""
     team_stats = {}
     
-    # 1. 일반 경기 우승 종목 수집
     for m in st.session_state.matches:
         if m["grade"] == grade and m["winner"]:
             w = m["winner"]
             if w not in team_stats:
                 team_stats[w] = {"wins": 0, "events": []}
             team_stats[w]["wins"] += 1
-            team_stats[w]["events"].append(m["event"]) # 예: "축구 결승" 저장
+            team_stats[w]["events"].append(m["event"]) 
             
-    # 2. 계주 1등 우승 종목 수집
     if 'relay_data' in st.session_state and grade in st.session_state.relay_data:
         relay_1st = st.session_state.relay_data[grade].get("1등")
         if relay_1st:
@@ -125,19 +122,22 @@ def calculate_rankings(grade):
             team_stats[relay_1st]["wins"] += 1
             team_stats[relay_1st]["events"].append("계주 1등")
 
-    # 승수(wins)가 많은 순서대로 정렬하여 반환
     return sorted(team_stats.items(), key=lambda x: x[1]["wins"], reverse=True)
 
 # ==========================================
 # 전광판 화면 구성 헬퍼 함수
 # ==========================================
 def display_integrated_kiosk():
-    st.markdown("<h1 style='text-align: center; font-size: 3.5rem; color: #1E90FF;'>⚡ 강화고 체육대회 통합 LIVE ⚡</h1>", unsafe_allow_html=True)
+    # [변경됨] 상단 여백을 대폭 줄이고 텍스트 크기를 화면에 딱 맞게 조정했습니다.
+    st.markdown("<h1 style='text-align: center; font-size: 3rem; color: #1E90FF; margin-top: -30px; margin-bottom: 20px;'>⚡ 강화고 체육대회 통합 LIVE ⚡</h1>", unsafe_allow_html=True)
     
-    st.markdown("<h2 style='text-align: center; margin-top: 15px;'>🏃 학년별 계주 결과</h2>", unsafe_allow_html=True)
-    r_col1, r_col2, r_col3 = st.columns(3)
-    for g in [1, 2, 3]:
-        with [r_col1, r_col2, r_col3][g-1]:
+    # [핵심] 화면을 1:2.5 비율로 나누어 왼쪽엔 계주, 오른쪽엔 매치업을 배치합니다.
+    col_relay, col_matches = st.columns([1, 2.5])
+    
+    # --- 왼쪽: 학년별 계주 현황 ---
+    with col_relay:
+        st.markdown("<h3 style='text-align: center; margin-top: 0;'>🏃 계주 결과</h3>", unsafe_allow_html=True)
+        for g in [1, 2, 3]:
             r1 = st.session_state.relay_data[g]["1등"]
             r2 = st.session_state.relay_data[g]["2등"]
             if r1 and r2:
@@ -146,25 +146,25 @@ def display_integrated_kiosk():
                 res_html = f"🥇 1등: <b>{r1}</b><br>🥈 2등: --"
             else:
                 res_html = "<span style='color: #888;'>⏳ 결과 대기 중</span>"
-            st.markdown(f"<div style='background-color: #f0f2f6; padding: 15px; border-radius: 12px; text-align: center; font-size: 1.3rem; border: 2px solid #d1d5db;'>🏅 <b>{g}학년 계주</b><br><div style='margin-top:10px;'>{res_html}</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background-color: #f0f2f6; padding: 12px; border-radius: 12px; text-align: center; font-size: 1.1rem; margin-bottom: 15px; border: 2px solid #d1d5db;'>🏅 <b>{g}학년</b><br><div style='margin-top:5px;'>{res_html}</div></div>", unsafe_allow_html=True)
             
-    st.divider()
-    st.markdown("<h2 style='text-align: center; margin-top: 10px;'>🎯 경기 실시간 상황</h2>", unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns(3)
-    cols = [col1, col2, col3]
-    for i, m in enumerate(st.session_state.matches):
-        status = get_match_status(m["time"], m["winner"])
-        with cols[i % 3]:
-            if "진행 중" in status:
-                st.error(f"**[{m['time']}] {m['grade']}학년 {m['event']}**\n\n### {m['team_a']} vs {m['team_b']}\n\n{status}")
-            elif "종료" in status:
-                st.success(f"**[{m['time']}] {m['grade']}학년 {m['event']}**\n\n### {status}")
-            else:
-                st.info(f"**[{m['time']}] {m['grade']}학년 {m['event']}**\n\n### {m['team_a']} vs {m['team_b']}\n\n{status}")
+    # --- 오른쪽: 토너먼트 매치업 현황 ---
+    with col_matches:
+        st.markdown("<h3 style='text-align: center; margin-top: 0;'>🎯 실시간 매치업 현황</h3>", unsafe_allow_html=True)
+        # 오른쪽 영역 안에서 다시 3열로 나누어 공간을 100% 활용합니다.
+        m_cols = st.columns(3)
+        for i, m in enumerate(st.session_state.matches):
+            status = get_match_status(m["time"], m["winner"])
+            with m_cols[i % 3]:
+                if "진행 중" in status:
+                    st.error(f"**[{m['time']}] {m['grade']}학년 {m['event']}**\n\n### {m['team_a']} VS {m['team_b']}\n\n**{status}**")
+                elif "종료" in status:
+                    st.success(f"**[{m['time']}] {m['grade']}학년 {m['event']}**\n\n### {status}")
+                else:
+                    st.info(f"**[{m['time']}] {m['grade']}학년 {m['event']}**\n\n### {m['team_a']} vs {m['team_b']}\n\n{status}")
 
 def display_grade_kiosk(g_idx):
-    st.markdown(f"<h1 style='text-align: center; font-size: 4rem; margin-bottom: 20px;'>{g_idx}학년 실시간 전광판</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h1 style='text-align: center; font-size: 4rem; margin-bottom: 20px; margin-top: -20px;'>{g_idx}학년 실시간 전광판</h1>", unsafe_allow_html=True)
     col_rank, col_matches = st.columns([1, 1.2])
     
     with col_rank:
@@ -172,8 +172,6 @@ def display_grade_kiosk(g_idx):
         rankings = calculate_rankings(g_idx)
         if rankings:
             for i, (team, stats) in enumerate(rankings):
-                wins = stats["wins"]
-                # 리스트에 담긴 종목들을 쉼표로 예쁘게 이어 붙임 (예: 축구 결승, 농구 결승)
                 events_str = ", ".join(stats["events"]) 
                 
                 if i == 0:
@@ -231,7 +229,7 @@ def show_page():
             </style>
         """, unsafe_allow_html=True)
 
-        k_tabs = st.tabs(["🌐 통합 현황", "🐣 1학년 전광판", "🐥 2학년 전광판", "🦅 3학년 전광판"])
+        k_tabs = st.tabs(["🌐 통합 현황", "🐣 1학년", "🐥 2학년", "🦅 3학년"])
         with k_tabs[0]:
             display_integrated_kiosk()
         for i in range(1, 4):
@@ -323,24 +321,4 @@ def show_page():
                     current_1st = st.session_state.relay_data[g]["1등"]
                     current_2nd = st.session_state.relay_data[g]["2등"]
                     
-                    idx_1st = class_options.index(current_1st) if current_1st in class_options else 0
-                    idx_2nd = class_options.index(current_2nd) if current_2nd in class_options else 0
-                    
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        sel_1st = st.selectbox(f"{g}학년 계주 1등 반", options=class_options, index=idx_1st, key=f"relay_1st_{g}")
-                    with c2:
-                        sel_2nd = st.selectbox(f"{g}학년 계주 2등 반", options=class_options, index=idx_2nd, key=f"relay_2nd_{g}")
-                        
-                    new_1st = None if sel_1st == "선택 안함" else sel_1st
-                    new_2nd = None if sel_2nd == "선택 안함" else sel_2nd
-                    
-                    if current_1st != new_1st:
-                        with st.spinner(f"{g}학년 계주 1등 저장 중..."):
-                            update_relay_to_db(g, "1등", new_1st)
-                        st.rerun()
-                        
-                    if current_2nd != new_2nd:
-                        with st.spinner(f"{g}학년 계주 2등 저장 중..."):
-                            update_relay_to_db(g, "2등", new_2nd)
-                        st.rerun()
+                    idx_1st = class_options.index
