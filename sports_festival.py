@@ -44,6 +44,14 @@ def initialize_data():
         else:
             if "줄다리기" in event_str and grade_val == 3 and row['id'] == 7:
                 continue
+            
+            # 👇 [추가] 참가팀이 "전체"인 기록제 종목은 매치업 리스트에서 제외!
+            if str(row['team_a']).strip() == "전체":
+                continue
+                
+            matches.append({
+                "id": row['id'],
+                "time": row['time'],
             matches.append({
                 "id": row['id'],
                 "time": row['time'],
