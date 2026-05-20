@@ -14,10 +14,11 @@ def initialize_data():
         df['winner'] = None
 
     matches = []
-    relay_data = {
-        1: {"1등": None, "2등": None},
-        2: {"1등": None, "2등": None},
-        3: {"1등": None, "2등": None}
+    # 학년별 동적 기록 종목 저장소 초기화
+    extra_events = {
+        1: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None},
+        2: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None},
+        3: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "일반 줄넘기 1등": None}
     }
     
     for idx, row in df.iterrows():
@@ -27,12 +28,16 @@ def initialize_data():
         else:
             clean_winner = raw_winner
 
-        event_str = str(row['event'])
-        if "계주 1등" in event_str:
-            relay_data[int(row['grade'])]["1등"] = clean_winner
-        elif "계주 2등" in event_str:
-            relay_data[int(row['grade'])]["2등"] = clean_winner
+        event_str = str(row['event']).strip()
+        grade_val = int(pd.to_numeric(row['grade'], errors='coerce').fillna(0))
+        
+        # 추가된 점수제/기록제 종목 분리 플래그
+        if event_str in ["계주 1등", "계주 2등", "줄다리기 1등", "8자 줄넘기 1등", "일반 줄넘기 1등"] and grade_val in [1, 2, 3]:
+            extra_events[grade_val][event_str] = clean_winner
         else:
+            # 기존 하드코딩된 줄다리기 행(id 7번)이 있다면 중복 방지를 위해 제외
+            if "줄다리기" in event_str and grade_val == 3 and row['id'] == 7:
+                continue
             matches.append({
                 "id": row['id'],
                 "time": row['time'],
@@ -45,7 +50,7 @@ def initialize_data():
             })
             
     st.session_state.matches = matches
-    st.session_state.relay_data = relay_data
+    st.session_state.extra_events = extra_events
 
 def update_winner_to_db(match_index, new_winner):
     conn = st.connection("gsheets", type=GSheetsConnection)
@@ -61,7 +66,8 @@ def update_winner_to_db(match_index, new_winner):
     conn.update(worksheet="체육대회_경기", data=df)
     st.cache_data.clear()
 
-def update_relay_to_db(grade, rank_type, new_winner):
+def update_extra_event_to_db(grade, event_name, new_winner):
+    """모든 기록형 종목(계주, 줄다리기, 줄넘기)의 결과를 구글 시트에 동적 기록하는 범용 함수"""
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="체육대회_경기", ttl=0)
     
@@ -69,16 +75,12 @@ def update_relay_to_db(grade, rank_type, new_winner):
         df['winner'] = None
     df['winner'] = df['winner'].astype(object)
     
-    # [버그 픽스] 학년 데이터를 정수로 강제 통일하여 시트 매칭 오류 방지
     df['grade'] = pd.to_numeric(df['grade'], errors='coerce').fillna(0).astype(int)
-    
-    event_name = f"계주 {rank_type}"
     condition = (df['grade'] == grade) & (df['event'] == event_name)
     
     if condition.any():
         df.loc[condition, 'winner'] = "" if new_winner is None else new_winner
     else:
-        # 시트에 계주 관련 행이 아예 없으면 여기서 알아서 엑셀 줄을 만들어줍니다!
         new_id = int(df['id'].max()) + 1 if not df['id'].empty else 1
         new_row = {
             "id": new_id,
@@ -96,7 +98,7 @@ def update_relay_to_db(grade, rank_type, new_winner):
     st.cache_data.clear()
 
 # ==========================================
-# 상태 및 우승 종목 수집 로직
+# 상태 및 다승제 기반 성적 수집 로직
 # ==========================================
 def get_match_status(match_time_str, winner):
     now = datetime.datetime.now().strftime("%H:%M")
@@ -108,23 +110,36 @@ def get_match_status(match_time_str, winner):
         return "⏳ 예정"
 
 def calculate_rankings(grade):
+    """각 반이 거둔 모든 성적 상세 정보를 수집하여 다승 순으로 정렬합니다."""
     team_stats = {}
     
+    def add_achievement(team, record_text, is_win=True):
+        if team not in team_stats:
+            team_stats[team] = {"wins": 0, "achievements": []}
+        if is_win:
+            team_stats[team]["wins"] += 1
+        team_stats[team]["achievements"].append(record_text)
+
+    # 1. 토너먼트 경기 결과 반영 (+1승)
     for m in st.session_state.matches:
         if m["grade"] == grade and m["winner"]:
-            w = m["winner"]
-            if w not in team_stats:
-                team_stats[w] = {"wins": 0, "events": []}
-            team_stats[w]["wins"] += 1
-            team_stats[w]["events"].append(m["event"]) 
+            add_achievement(m["winner"], f"{m['event']} 우승", is_win=True)
             
-    if 'relay_data' in st.session_state and grade in st.session_state.relay_data:
-        relay_1st = st.session_state.relay_data[grade].get("1등")
-        if relay_1st:
-            if relay_1st not in team_stats:
-                team_stats[relay_1st] = {"wins": 0, "events": []}
-            team_stats[relay_1st]["wins"] += 1
-            team_stats[relay_1st]["events"].append("계주 1등")
+    # 2. 기록제/점수제 종목 결과 반영
+    if 'extra_events' in st.session_state and grade in st.session_state.extra_events:
+        events = st.session_state.extra_events[grade]
+        
+        if events.get("계주 1등"):
+            add_achievement(events["계주 1등"], "계주 1등", is_win=True)
+        if events.get("계주 2등"):
+            # 계주 2등은 순위 예측 서술에는 포함하되, 승수(+1승)에는 반영하지 않음
+            add_achievement(events["계주 2등"], "계주 2등", is_win=False)
+        if events.get("줄다리기 1등"):
+            add_achievement(events["줄다리기 1등"], "줄다리기 1등", is_win=True)
+        if events.get("8자 줄넘기 1등"):
+            add_achievement(events["8자 줄넘기 1등"], "8자 줄넘기 1등", is_win=True)
+        if events.get("일반 줄넘기 1등"):
+            add_achievement(events["일반 줄넘기 1등"], "일반 줄넘기 1등", is_win=True)
 
     return sorted(team_stats.items(), key=lambda x: x[1]["wins"], reverse=True)
 
@@ -134,21 +149,30 @@ def calculate_rankings(grade):
 def display_integrated_kiosk():
     st.markdown("<h1 style='text-align: center; font-size: 3rem; color: #1E90FF; margin-top: -30px; margin-bottom: 20px;'>⚡ 강화고 체육대회 통합 LIVE ⚡</h1>", unsafe_allow_html=True)
     
-    col_relay, col_matches = st.columns([1, 2.5])
+    col_relay, col_matches = st.columns([1.2, 2.3])
     
+    # --- 왼쪽 영역: 기록제 종목 종합 리포트 ---
     with col_relay:
-        st.markdown("<h3 style='text-align: center; margin-top: 0;'>🏃 계주 결과</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align: center; margin-top: 0;'>📊 학년별 주요 기록</h3>", unsafe_allow_html=True)
         for g in [1, 2, 3]:
-            r1 = st.session_state.relay_data[g]["1등"]
-            r2 = st.session_state.relay_data[g]["2등"]
-            if r1 and r2:
-                res_html = f"🥇 1등: <b>{r1}</b><br>🥈 2등: <b>{r2}</b>"
-            elif r1:
-                res_html = f"🥇 1등: <b>{r1}</b><br>🥈 2등: --"
-            else:
-                res_html = "<span style='color: #888;'>⏳ 결과 대기 중</span>"
-            st.markdown(f"<div style='background-color: #f0f2f6; padding: 12px; border-radius: 12px; text-align: center; font-size: 1.1rem; margin-bottom: 15px; border: 2px solid #d1d5db;'>🏅 <b>{g}학년</b><br><div style='margin-top:5px;'>{res_html}</div></div>", unsafe_allow_html=True)
+            events = st.session_state.extra_events[g]
             
+            lines = []
+            if events["계주 1등"] or events["계주 2등"]:
+                r1 = events["계주 1등"] if events["계주 1등"] else "--"
+                r2 = events["계주 2등"] if events["계주 2등"] else "--"
+                lines.append(f"🏃 계주 ➔ 1등: <b>{r1}</b> / 2등: <b>{r2}</b>")
+            else:
+                lines.append("🏃 계주 ➔ <span style='color:#888;'>결과 대기 중</span>")
+                
+            lines.append(f" rope 8자 ➔ <b>{events['8자 줄넘기 1등'] if events['8자 줄넘기 1등'] else '--'}</b>")
+            lines.append(f"⏱️ 일반 ➔ <b>{events['일반 줄넘기 1등'] if events['일반 줄넘기 1등'] else '--'}</b>")
+            lines.append(f"💪 줄다리기 ➔ <b>{events['줄다리기 1등'] if events['줄다리기 1등'] else '--'}</b>")
+            
+            content_html = "<br>".join(lines)
+            st.markdown(f"<div style='background-color: #f0f2f6; padding: 12px; border-radius: 12px; font-size: 1rem; margin-bottom: 12px; border: 2px solid #d1d5db;'>🏅 <b style='font-size:1.1rem;'>{g}학년 종합 결과</b><br><div style='margin-top:8px; line-height: 1.6;'>{content_html}</div></div>", unsafe_allow_html=True)
+            
+    # --- 오른쪽 영역: 토너먼트 매치업 현황 ---
     with col_matches:
         st.markdown("<h3 style='text-align: center; margin-top: 0;'>🎯 실시간 매치업 현황</h3>", unsafe_allow_html=True)
         m_cols = st.columns(3)
@@ -164,25 +188,26 @@ def display_integrated_kiosk():
 
 def display_grade_kiosk(g_idx):
     st.markdown(f"<h1 style='text-align: center; font-size: 4rem; margin-bottom: 20px; margin-top: -20px;'>{g_idx}학년 실시간 전광판</h1>", unsafe_allow_html=True)
-    col_rank, col_matches = st.columns([1, 1.2])
+    col_rank, col_matches = st.columns([1.1, 1.1])
     
     with col_rank:
         st.markdown(f"<h3 style='text-align: center; font-size: 2.5rem;'>👑 {g_idx}학년 종합 순위 예측</h3>", unsafe_allow_html=True)
         rankings = calculate_rankings(g_idx)
         if rankings:
             for i, (team, stats) in enumerate(rankings):
-                events_str = ", ".join(stats["events"]) 
+                # 반이 획득한 모든 세부 성적을 하나의 문자열로 연결
+                achievements_str = ", ".join(stats["achievements"])
                 
                 if i == 0:
-                    st.markdown(f"<div style='font-size: 3rem; background: #fffbea; border: 4px solid #FFD700; padding: 20px; border-radius: 15px; margin-bottom: 15px; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);'>🥇 1위: <b>{team}</b><br><span style='font-size:1.5rem; color:#d4af37;'>🏆 {events_str} 우승</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 2.8rem; background: #fffbea; border: 4px solid #FFD700; padding: 18px; border-radius: 15px; margin-bottom: 15px; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);'>🥇 1위: <b>{team}</b><br><span style='font-size:1.4rem; color:#d4af37;'>🏆 {achievements_str}</span></div>", unsafe_allow_html=True)
                 elif i == 1:
-                    st.markdown(f"<div style='font-size: 2.5rem; background: #f8f9fa; border: 4px solid #C0C0C0; padding: 15px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥈 2위: <b>{team}</b><br><span style='font-size:1.2rem; color:#666;'>🏆 {events_str} 우승</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 2.3rem; background: #f8f9fa; border: 4px solid #C0C0C0; padding: 14px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥈 2위: <b>{team}</b><br><span style='font-size:1.2rem; color:#666;'>🏆 {achievements_str}</span></div>", unsafe_allow_html=True)
                 elif i == 2:
-                    st.markdown(f"<div style='font-size: 2rem; background: #fff0f5; border: 4px solid #CD7F32; padding: 15px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥉 3위: <b>{team}</b><br><span style='font-size:1rem; color:#666;'>🏆 {events_str} 우승</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 1.9rem; background: #fff0f5; border: 4px solid #CD7F32; padding: 14px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥉 3위: <b>{team}</b><br><span style='font-size:1rem; color:#666;'>🏆 {achievements_str}</span></div>", unsafe_allow_html=True)
                 else:
-                    st.markdown(f"<div style='font-size: 1.5rem; text-align: center;'>{i+1}위: {team} <span style='font-size:1rem; color:#888;'>({events_str})</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 1.4rem; text-align: center; margin-bottom: 10px;'>{i+1}위: {team} <span style='font-size:0.95rem; color:#888;'>({achievements_str})</span></div>", unsafe_allow_html=True)
         else:
-            st.info("아직 승리를 기록한 반이 없습니다.")
+            st.info("아직 성적을 기록한 반이 없습니다.")
 
     with col_matches:
         st.markdown(f"<h3 style='text-align: center; font-size: 2.5rem;'>🎯 {g_idx}학년 매치업</h3>", unsafe_allow_html=True)
@@ -262,11 +287,11 @@ def show_page():
                 rankings = calculate_rankings(g_idx)
                 if rankings:
                     for i, (team, stats) in enumerate(rankings):
-                        events_str = ", ".join(stats["events"])
+                        achievements_str = ", ".join(stats["achievements"])
                         medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
-                        st.write(f"{medal} **{team}** ➔ 🏆 {events_str} 우승")
+                        st.write(f"{medal} **{team}** ➔ 🏆 {achievements_str}")
                 else:
-                    st.write("아직 승리를 기록한 반이 없습니다.")
+                    st.write("아직 성적을 기록한 반이 없습니다.")
 
         st.divider()
         
@@ -311,33 +336,52 @@ def show_page():
                             update_winner_to_db(i, new_winner)
                         st.rerun()
                 
+                # --- 확장된 학년별 기록제 종목 입력 UI ---
                 st.write("---")
-                st.subheader("🏃 학년별 계주 결과 입력")
+                st.subheader("📊 학년별 점수제/기록제 종목 결과 입력")
                 class_options = ["선택 안함"] + [f"{i}반" for i in range(1, 9)]
                 
                 for g in [1, 2, 3]:
-                    st.markdown(f"**💡 {g}학년 계주 순위 선택**")
-                    current_1st = st.session_state.relay_data[g]["1등"]
-                    current_2nd = st.session_state.relay_data[g]["2등"]
+                    st.markdown(f"#### 💡 **{g}학년 세부 기록 설정**")
+                    current_events = st.session_state.extra_events[g]
                     
-                    idx_1st = class_options.index(current_1st) if current_1st in class_options else 0
-                    idx_2nd = class_options.index(current_2nd) if current_2nd in class_options else 0
-                    
+                    # 1행: 계주 결과 입력
                     c1, c2 = st.columns(2)
-                    with c1:
-                        sel_1st = st.selectbox(f"{g}학년 계주 1등 반", options=class_options, index=idx_1st, key=f"relay_1st_{g}")
-                    with c2:
-                        sel_2nd = st.selectbox(f"{g}학년 계주 2등 반", options=class_options, index=idx_2nd, key=f"relay_2nd_{g}")
-                        
-                    new_1st = None if sel_1st == "선택 안함" else sel_1st
-                    new_2nd = None if sel_2nd == "선택 안함" else sel_2nd
+                    idx_1st = class_options.index(current_events["계주 1등"]) if current_events["계주 1등"] in class_options else 0
+                    idx_2nd = class_options.index(current_events["계주 2등"]) if current_events["계주 2등"] in class_options else 0
                     
-                    if current_1st != new_1st:
-                        with st.spinner(f"{g}학년 계주 1등 저장 중..."):
-                            update_relay_to_db(g, "1등", new_1st)
+                    with c1:
+                        sel_1st = st.selectbox(f"{g}학년 계주 1등", options=class_options, index=idx_1st, key=f"relay_1st_{g}")
+                    with c2:
+                        sel_2nd = st.selectbox(f"{g}학년 계주 2등", options=class_options, index=idx_2nd, key=f"relay_2nd_{g}")
+                        
+                    if current_events["계주 1등"] != (None if sel_1st == "선택 안함" else sel_1st):
+                        update_extra_event_to_db(g, "계주 1등", None if sel_1st == "선택 안함" else sel_1st)
+                        st.rerun()
+                    if current_events["계주 2등"] != (None if sel_2nd == "선택 안함" else sel_2nd):
+                        update_extra_event_to_db(g, "계주 2등", None if sel_2nd == "선택 안함" else sel_2nd)
                         st.rerun()
                         
-                    if current_2nd != new_2nd:
-                        with st.spinner(f"{g}학년 계주 2등 저장 중..."):
-                            update_relay_to_db(g, "2등", new_2nd)
+                    # 2행: 줄다리기 및 줄넘기 결과 입력
+                    c3, c4, c5 = st.columns(3)
+                    idx_tug = class_options.index(current_events["줄다리기 1등"]) if current_events["줄다리기 1등"] in class_options else 0
+                    idx_rope8 = class_options.index(current_events["8자 줄넘기 1등"]) if current_events["8자 줄넘기 1등"] in class_options else 0
+                    idx_ropesg = class_options.index(current_events["일반 줄넘기 1등"]) if current_events["일반 줄넘기 1등"] in class_options else 0
+                    
+                    with c3:
+                        sel_tug = st.selectbox(f"{g}학년 줄다리기 1등", options=class_options, index=idx_tug, key=f"tug_{g}")
+                    with c4:
+                        sel_rope8 = st.selectbox(f"{g}학년 8자 줄넘기 1등", options=class_options, index=idx_rope8, key=f"rope8_{g}")
+                    with c5:
+                        sel_ropesg = st.selectbox(f"{g}학년 일반 줄넘기 1등", options=class_options, index=idx_ropesg, key=f"ropesg_{g}")
+                        
+                    if current_events["줄다리기 1등"] != (None if sel_tug == "선택 안함" else sel_tug):
+                        update_extra_event_to_db(g, "줄다리기 1등", None if sel_tug == "선택 안함" else sel_tug)
                         st.rerun()
+                    if current_events["8자 줄넘기 1등"] != (None if sel_rope8 == "선택 안함" else sel_rope8):
+                        update_extra_event_to_db(g, "8자 줄넘기 1등", None if sel_rope8 == "선택 안함" else sel_rope8)
+                        st.rerun()
+                    if current_events["일반 줄넘기 1등"] != (None if sel_ropesg == "선택 안함" else sel_ropesg):
+                        update_extra_event_to_db(g, "일반 줄넘기 1등", None if sel_ropesg == "선택 안함" else sel_ropesg)
+                        st.rerun()
+                    st.write("")
