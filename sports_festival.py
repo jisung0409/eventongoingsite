@@ -4,17 +4,16 @@ import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 
 # ==========================================
-# 🗄️ DB 통신 함수 (초기 접속 방어막 추가)
+# 🗄️ DB 통신 함수 (초기 접속 방어 & 일괄 업데이트)
 # ==========================================
 def initialize_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
     
-    # [방어막 장착] 구글 서버가 응답을 거부하면 빨간 창 대신 부드러운 안내 메시지 출력 후 정지
     try:
         df = conn.read(worksheet="체육대회_경기", ttl="10m")
     except Exception:
         st.warning("⚠️ 현재 접속자가 많아 구글 서버와 통신이 지연되고 있습니다. 약 1분 뒤에 새로고침(F5) 해주세요.")
-        st.stop() # 여기서 코드 실행을 멈춰서 빨간 에러가 뜨지 않게 막음
+        st.stop()
     
     if 'winner' not in df.columns:
         df['winner'] = None
@@ -59,47 +58,34 @@ def initialize_data():
     st.session_state.matches = matches
     st.session_state.extra_events = extra_events
 
-def update_winner_to_db(match_index, new_winner):
+# [핵심] 수십 번의 개별 업데이트를 하나로 합친 '일괄 저장(Bulk Update)' 함수
+def bulk_update_db(match_changes, extra_changes):
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="체육대회_경기", ttl=0)
     
     if 'winner' not in df.columns:
         df['winner'] = None
     df['winner'] = df['winner'].astype(object)
-    
-    match_id = st.session_state.matches[match_index]["id"]
-    df.loc[df['id'] == match_id, 'winner'] = "" if new_winner is None else new_winner
-    
-    conn.update(worksheet="체육대회_경기", data=df)
-    st.cache_data.clear()
-
-def update_extra_event_to_db(grade, event_name, new_winner):
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    df = conn.read(worksheet="체육대회_경기", ttl=0)
-    
-    if 'winner' not in df.columns:
-        df['winner'] = None
-    df['winner'] = df['winner'].astype(object)
-    
     df['grade'] = pd.to_numeric(df['grade'], errors='coerce').fillna(0).astype(int)
-    condition = (df['grade'] == grade) & (df['event'] == event_name)
     
-    if condition.any():
-        df.loc[condition, 'winner'] = "" if new_winner is None else new_winner
-    else:
-        new_id = int(df['id'].max()) + 1 if not df['id'].empty else 1
-        new_row = {
-            "id": new_id,
-            "time": "15:00",
-            "grade": grade,
-            "event": event_name,
-            "team_a": "전체",
-            "team_b": "전체",
-            "winner": "" if new_winner is None else new_winner,
-            "points": 0
-        }
-        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    # 1. 토너먼트 경기 일괄 적용
+    for match_id, new_winner in match_changes.items():
+        df.loc[df['id'] == match_id, 'winner'] = "" if new_winner is None else new_winner
         
+    # 2. 기록제/점수제 종목 일괄 적용
+    for (grade, event_name), new_winner in extra_changes.items():
+        condition = (df['grade'] == grade) & (df['event'] == event_name)
+        if condition.any():
+            df.loc[condition, 'winner'] = "" if new_winner is None else new_winner
+        else:
+            new_id = int(df['id'].max()) + 1 if not df['id'].empty else 1
+            new_row = {
+                "id": new_id, "time": "15:00", "grade": grade, "event": event_name,
+                "team_a": "전체", "team_b": "전체", "winner": "" if new_winner is None else new_winner,
+                "points": 0
+            }
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            
     conn.update(worksheet="체육대회_경기", data=df)
     st.cache_data.clear()
 
@@ -131,17 +117,11 @@ def calculate_rankings(grade):
             
     if 'extra_events' in st.session_state and grade in st.session_state.extra_events:
         events = st.session_state.extra_events[grade]
-        
-        if events.get("계주 1등"):
-            add_achievement(events["계주 1등"], "계주 1등", is_win=True)
-        if events.get("계주 2등"):
-            add_achievement(events["계주 2등"], "계주 2등", is_win=False)
-        if events.get("줄다리기 1등"):
-            add_achievement(events["줄다리기 1등"], "줄다리기 1등", is_win=True)
-        if events.get("8자 줄넘기 1등"):
-            add_achievement(events["8자 줄넘기 1등"], "8자 줄넘기 1등", is_win=True)
-        if events.get("쌩쌩이 줄넘기 1등"):
-            add_achievement(events["쌩쌩이 줄넘기 1등"], "쌩쌩이 1등", is_win=True)
+        if events.get("계주 1등"): add_achievement(events["계주 1등"], "계주 1등", is_win=True)
+        if events.get("계주 2등"): add_achievement(events["계주 2등"], "계주 2등", is_win=False)
+        if events.get("줄다리기 1등"): add_achievement(events["줄다리기 1등"], "줄다리기 1등", is_win=True)
+        if events.get("8자 줄넘기 1등"): add_achievement(events["8자 줄넘기 1등"], "8자 줄넘기 1등", is_win=True)
+        if events.get("쌩쌩이 줄넘기 1등"): add_achievement(events["쌩쌩이 줄넘기 1등"], "쌩쌩이 1등", is_win=True)
 
     return sorted(team_stats.items(), key=lambda x: x[1]["wins"], reverse=True)
 
@@ -152,12 +132,10 @@ def display_integrated_kiosk():
     st.markdown("<h1 style='text-align: center; font-size: 3rem; color: #1E90FF; margin-top: -30px; margin-bottom: 20px;'>⚡ 강화고 체육대회 통합 LIVE ⚡</h1>", unsafe_allow_html=True)
     
     col_relay, col_matches = st.columns([1.2, 2.3])
-    
     with col_relay:
         st.markdown("<h3 style='text-align: center; margin-top: 0;'>📊 학년별 주요 기록</h3>", unsafe_allow_html=True)
         for g in [1, 2, 3]:
             events = st.session_state.extra_events[g]
-            
             lines = []
             if events["계주 1등"] or events["계주 2등"]:
                 r1 = events["계주 1등"] if events["계주 1등"] else "--"
@@ -196,7 +174,6 @@ def display_grade_kiosk(g_idx):
         if rankings:
             for i, (team, stats) in enumerate(rankings):
                 achievements_str = ", ".join(stats["achievements"])
-                
                 if i == 0:
                     st.markdown(f"<div style='font-size: 2.8rem; background: #fffbea; border: 4px solid #FFD700; padding: 18px; border-radius: 15px; margin-bottom: 15px; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);'>🥇 1위: <b>{team}</b><br><span style='font-size:1.4rem; color:#d4af37;'>🏆 {achievements_str}</span></div>", unsafe_allow_html=True)
                 elif i == 1:
@@ -215,7 +192,6 @@ def display_grade_kiosk(g_idx):
             if m["grade"] == g_idx:
                 has_matches = True
                 status = get_match_status(m["time"], m["winner"])
-                
                 if "진행 중" in status:
                     st.error(f"⏰ **{m['time']} | {m['event']}**\n\n## {m['team_a']} VS {m['team_b']}\n\n**{status}**")
                 elif "종료" in status:
@@ -295,7 +271,7 @@ def show_page():
         st.divider()
         
         # ==========================================
-        # 🔐 운영진 전용 (Staff Only)
+        # 🔐 운영진 전용 (일괄 저장 폼 도입)
         # ==========================================
         if 'admin_logged_in' not in st.session_state:
             st.session_state.admin_logged_in = False
@@ -319,91 +295,68 @@ def show_page():
                         st.session_state.admin_logged_in = False
                         st.rerun()
 
-                st.subheader("🎯 토너먼트 종목 결과 입력")
-                for i, m in enumerate(st.session_state.matches):
-                    winner_choice = st.radio(
-                        f"{m['grade']}학년 {m['event']} ({m['time']})",
-                        options=["선택 안함", m['team_a'], m['team_b']],
-                        index=0 if m['winner'] is None else (1 if m['winner'] == m['team_a'] else 2),
-                        key=f"match_{i}"
-                    )
-                    
-                    new_winner = None if winner_choice == "선택 안함" else winner_choice
-                    if st.session_state.matches[i]["winner"] != new_winner:
-                        try:
-                            st.session_state.matches[i]["winner"] = new_winner
-                            with st.spinner("구글 시트에 저장 중..."):
-                                update_winner_to_db(i, new_winner)
-                            st.rerun()
-                        except Exception:
-                            st.error("⚠️ 구글 서버 통신량 초과! (잠시 후 다시 선택해주세요)")
+                st.warning("아래에서 결과를 모두 수정한 뒤, 맨 밑의 **[💾 전체 저장하기]** 버튼을 눌러야 시트에 반영됩니다.")
                 
-                st.write("---")
-                st.subheader("📊 학년별 점수제/기록제 종목 결과 입력")
-                class_options = ["선택 안함"] + [f"{i}반" for i in range(1, 9)]
-                
-                for g in [1, 2, 3]:
-                    st.markdown(f"#### 💡 **{g}학년 세부 기록 설정**")
-                    current_events = st.session_state.extra_events[g]
+                # [핵심] st.form 을 사용하여 입력값들을 한 번에 모음
+                with st.form("admin_bulk_update_form"):
                     
-                    c1, c2 = st.columns(2)
-                    idx_1st = class_options.index(current_events["계주 1등"]) if current_events["계주 1등"] in class_options else 0
-                    idx_2nd = class_options.index(current_events["계주 2등"]) if current_events["계주 2등"] in class_options else 0
+                    st.subheader("🎯 토너먼트 종목 결과 입력")
+                    match_inputs = []
+                    for i, m in enumerate(st.session_state.matches):
+                        val = st.radio(
+                            f"{m['grade']}학년 {m['event']} ({m['time']})",
+                            options=["선택 안함", m['team_a'], m['team_b']],
+                            index=0 if m['winner'] is None else (1 if m['winner'] == m['team_a'] else 2)
+                        )
+                        match_inputs.append({"id": m['id'], "val": val})
                     
-                    with c1:
-                        sel_1st = st.selectbox(f"{g}학년 계주 1등", options=class_options, index=idx_1st, key=f"relay_1st_{g}")
-                    with c2:
-                        sel_2nd = st.selectbox(f"{g}학년 계주 2등", options=class_options, index=idx_2nd, key=f"relay_2nd_{g}")
-                        
-                    if current_events["계주 1등"] != (None if sel_1st == "선택 안함" else sel_1st):
-                        try:
-                            with st.spinner("저장 중..."):
-                                update_extra_event_to_db(g, "계주 1등", None if sel_1st == "선택 안함" else sel_1st)
-                            st.rerun()
-                        except Exception:
-                            st.error("⚠️ 구글 서버 통신량 초과! 천천히 변경해주세요.")
-                            
-                    if current_events["계주 2등"] != (None if sel_2nd == "선택 안함" else sel_2nd):
-                        try:
-                            with st.spinner("저장 중..."):
-                                update_extra_event_to_db(g, "계주 2등", None if sel_2nd == "선택 안함" else sel_2nd)
-                            st.rerun()
-                        except Exception:
-                            st.error("⚠️ 구글 서버 통신량 초과! 천천히 변경해주세요.")
-                        
-                    c3, c4, c5 = st.columns(3)
-                    idx_tug = class_options.index(current_events["줄다리기 1등"]) if current_events["줄다리기 1등"] in class_options else 0
-                    idx_rope8 = class_options.index(current_events["8자 줄넘기 1등"]) if current_events["8자 줄넘기 1등"] in class_options else 0
-                    idx_ropesg = class_options.index(current_events["쌩쌩이 줄넘기 1등"]) if current_events["쌩쌩이 줄넘기 1등"] in class_options else 0
+                    st.write("---")
+                    st.subheader("📊 학년별 점수제/기록제 종목 결과 입력")
+                    extra_inputs = []
+                    class_options = ["선택 안함"] + [f"{i}반" for i in range(1, 9)]
                     
-                    with c3:
-                        sel_tug = st.selectbox(f"{g}학년 줄다리기 1등", options=class_options, index=idx_tug, key=f"tug_{g}")
-                    with c4:
-                        sel_rope8 = st.selectbox(f"{g}학년 8자 줄넘기 1등", options=class_options, index=idx_rope8, key=f"rope8_{g}")
-                    with c5:
-                        sel_ropesg = st.selectbox(f"{g}학년 쌩쌩이 줄넘기 1등", options=class_options, index=idx_ropesg, key=f"ropesg_{g}")
+                    for g in [1, 2, 3]:
+                        st.markdown(f"#### 💡 **{g}학년 세부 기록 설정**")
+                        current_events = st.session_state.extra_events[g]
                         
-                    if current_events["줄다리기 1등"] != (None if sel_tug == "선택 안함" else sel_tug):
-                        try:
-                            with st.spinner("저장 중..."):
-                                update_extra_event_to_db(g, "줄다리기 1등", None if sel_tug == "선택 안함" else sel_tug)
-                            st.rerun()
-                        except Exception:
-                            st.error("⚠️ 구글 서버 통신량 초과! 천천히 변경해주세요.")
+                        c1, c2 = st.columns(2)
+                        idx_1st = class_options.index(current_events["계주 1등"]) if current_events["계주 1등"] in class_options else 0
+                        idx_2nd = class_options.index(current_events["계주 2등"]) if current_events["계주 2등"] in class_options else 0
+                        v_relay1 = c1.selectbox(f"{g}학년 계주 1등", options=class_options, index=idx_1st)
+                        v_relay2 = c2.selectbox(f"{g}학년 계주 2등", options=class_options, index=idx_2nd)
+                        extra_inputs.append({"grade": g, "event": "계주 1등", "val": v_relay1})
+                        extra_inputs.append({"grade": g, "event": "계주 2등", "val": v_relay2})
                             
-                    if current_events["8자 줄넘기 1등"] != (None if sel_rope8 == "선택 안함" else sel_rope8):
-                        try:
-                            with st.spinner("저장 중..."):
-                                update_extra_event_to_db(g, "8자 줄넘기 1등", None if sel_rope8 == "선택 안함" else sel_rope8)
-                            st.rerun()
-                        except Exception:
-                            st.error("⚠️ 구글 서버 통신량 초과! 천천히 변경해주세요.")
+                        c3, c4, c5 = st.columns(3)
+                        idx_tug = class_options.index(current_events["줄다리기 1등"]) if current_events["줄다리기 1등"] in class_options else 0
+                        idx_rope8 = class_options.index(current_events["8자 줄넘기 1등"]) if current_events["8자 줄넘기 1등"] in class_options else 0
+                        idx_ropesg = class_options.index(current_events["쌩쌩이 줄넘기 1등"]) if current_events["쌩쌩이 줄넘기 1등"] in class_options else 0
+                        v_tug = c3.selectbox(f"{g}학년 줄다리기 1등", options=class_options, index=idx_tug)
+                        v_rope8 = c4.selectbox(f"{g}학년 8자 줄넘기 1등", options=class_options, index=idx_rope8)
+                        v_ropesg = c5.selectbox(f"{g}학년 쌩쌩이 줄넘기 1등", options=class_options, index=idx_ropesg)
+                        extra_inputs.append({"grade": g, "event": "줄다리기 1등", "val": v_tug})
+                        extra_inputs.append({"grade": g, "event": "8자 줄넘기 1등", "val": v_rope8})
+                        extra_inputs.append({"grade": g, "event": "쌩쌩이 줄넘기 1등", "val": v_ropesg})
+                        st.write("")
+
+                    # 저장 버튼
+                    submitted = st.form_submit_button("💾 전체 저장하기 (구글 시트 전송)", use_container_width=True)
+                    
+                    if submitted:
+                        # 1. 딕셔너리 형태로 데이터 취합
+                        final_matches = {}
+                        for mi in match_inputs:
+                            final_matches[mi["id"]] = None if mi["val"] == "선택 안함" else mi["val"]
                             
-                    if current_events["쌩쌩이 줄넘기 1등"] != (None if sel_ropesg == "선택 안함" else sel_ropesg):
+                        final_extras = {}
+                        for ei in extra_inputs:
+                            final_extras[(ei["grade"], ei["event"])] = None if ei["val"] == "선택 안함" else ei["val"]
+                            
+                        # 2. 일괄 전송 (에러 방어)
                         try:
-                            with st.spinner("저장 중..."):
-                                update_extra_event_to_db(g, "쌩쌩이 줄넘기 1등", None if sel_ropesg == "선택 안함" else sel_ropesg)
+                            with st.spinner("구글 시트에 모든 결과를 한 번에 저장 중입니다..."):
+                                bulk_update_db(final_matches, final_extras)
+                            st.success("✅ 모든 결과가 성공적으로 저장되었습니다!")
                             st.rerun()
-                        except Exception:
-                            st.error("⚠️ 구글 서버 통신량 초과! 천천히 변경해주세요.")
-                    st.write("")
+                        except Exception as e:
+                            st.error(f"⚠️ 구글 서버 통신 오류! 잠시 후 다시 시도해주세요. (상세: {e})")
