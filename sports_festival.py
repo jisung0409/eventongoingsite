@@ -4,17 +4,22 @@ import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 
 # ==========================================
-# 🗄️ DB 통신 함수
+# 🗄️ DB 통신 함수 (초기 접속 방어막 추가)
 # ==========================================
 def initialize_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
-    df = conn.read(worksheet="체육대회_경기", ttl="10m")
+    
+    # [방어막 장착] 구글 서버가 응답을 거부하면 빨간 창 대신 부드러운 안내 메시지 출력 후 정지
+    try:
+        df = conn.read(worksheet="체육대회_경기", ttl="10m")
+    except Exception:
+        st.warning("⚠️ 현재 접속자가 많아 구글 서버와 통신이 지연되고 있습니다. 약 1분 뒤에 새로고침(F5) 해주세요.")
+        st.stop() # 여기서 코드 실행을 멈춰서 빨간 에러가 뜨지 않게 막음
     
     if 'winner' not in df.columns:
         df['winner'] = None
 
     matches = []
-    # [수정됨] 일반 줄넘기 -> 쌩쌩이 줄넘기 1등으로 변경
     extra_events = {
         1: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "쌩쌩이 줄넘기 1등": None},
         2: {"계주 1등": None, "계주 2등": None, "줄다리기 1등": None, "8자 줄넘기 1등": None, "쌩쌩이 줄넘기 1등": None},
