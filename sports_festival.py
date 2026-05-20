@@ -10,11 +10,17 @@ def initialize_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="체육대회_경기", ttl="10m")
     
-    # [방어 코드] 만약 구글 시트가 텅 비어서 winner 열을 인식 못했을 경우 열을 생성
     if 'winner' not in df.columns:
         df['winner'] = None
 
     matches = []
+    # 학년별 계주 결과를 담을 저장소 초기화
+    relay_data = {
+        1: {"1등": None, "2등": None},
+        2: {"1등": None, "2등": None},
+        3: {"1등": None, "2등": None}
+    }
+    
     for idx, row in df.iterrows():
         raw_winner = row['winner']
         if pd.isna(raw_winner) or str(raw_winner).strip().lower() in ['nan', 'none', '']:
@@ -22,35 +28,75 @@ def initialize_data():
         else:
             clean_winner = raw_winner
 
-        matches.append({
-            "id": row['id'],
-            "time": row['time'],
-            "grade": row['grade'],
-            "event": row['event'],
-            "team_a": row['team_a'],
-            "team_b": row['team_b'],
-            "winner": clean_winner,
-            "points": row['points']
-        })
+        event_str = str(row['event'])
+        # 시트 데이터 중 계주 데이터 분리 분기
+        if "계주 1등" in event_str:
+            relay_data[int(row['grade'])]["1등"] = clean_winner
+        elif "계주 2등" in event_str:
+            relay_data[int(row['grade'])]["2등"] = clean_winner
+        else:
+            matches.append({
+                "id": row['id'],
+                "time": row['time'],
+                "grade": row['grade'],
+                "event": row['event'],
+                "team_a": row['team_a'],
+                "team_b": row['team_b'],
+                "winner": clean_winner,
+                "points": row['points']
+            })
+            
     st.session_state.matches = matches
+    st.session_state.relay_data = relay_data
 
 def update_winner_to_db(match_index, new_winner):
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="체육대회_경기", ttl=0)
     
-    # [버그 해결 핵심] winner 열을 강제로 문자열 수용 가능(object) 타입으로 변환
     if 'winner' not in df.columns:
         df['winner'] = None
     df['winner'] = df['winner'].astype(object)
     
-    # .at 대신 좀 더 안정적인 .loc 사용
-    df.loc[match_index, 'winner'] = "" if new_winner is None else new_winner
+    match_id = st.session_state.matches[match_index]["id"]
+    df.loc[df['id'] == match_id, 'winner'] = "" if new_winner is None else new_winner
     
     conn.update(worksheet="체육대회_경기", data=df)
     st.cache_data.clear()
 
+def update_relay_to_db(grade, rank_type, new_winner):
+    """학년별 계주 결과를 구글 시트에 동적 기록하는 함수"""
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    df = conn.read(worksheet="체육대회_경기", ttl=0)
+    
+    if 'winner' not in df.columns:
+        df['winner'] = None
+    df['winner'] = df['winner'].astype(object)
+    
+    event_name = f"계주 {rank_type}"
+    condition = (df['grade'] == grade) & (df['event'] == event_name)
+    
+    if condition.any():
+        df.loc[condition, 'winner'] = "" if new_winner is None else new_winner
+    else:
+        # 시트에 계주 행이 없을 경우 자동 생성 로직
+        new_id = int(df['id'].max()) + 1 if not df['id'].empty else 1
+        new_row = {
+            "id": new_id,
+            "time": "15:00",
+            "grade": grade,
+            "event": event_name,
+            "team_a": "전체",
+            "team_b": "전체",
+            "winner": "" if new_winner is None else new_winner,
+            "points": 0
+        }
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        
+    conn.update(worksheet="체wear대회_경기", data=df)
+    st.cache_data.clear()
+
 # ==========================================
-# 상태 계산 로직
+# 상태 및 다승제 순위 계산 로직
 # ==========================================
 def get_match_status(match_time_str, winner):
     now = datetime.datetime.now().strftime("%H:%M")
@@ -62,10 +108,19 @@ def get_match_status(match_time_str, winner):
         return "⏳ 예정"
 
 def calculate_rankings(grade):
+    """포인트 대신 이긴 종목 수(다승)를 기준으로 정렬하는 함수"""
     scores = {}
+    # 1. 일반 경기 승리 카운트 (+1승)
     for m in st.session_state.matches:
         if m["grade"] == grade and m["winner"]:
-            scores[m["winner"]] = scores.get(m["winner"], 0) + m["points"]
+            scores[m["winner"]] = scores.get(m["winner"], 0) + 1
+            
+    # 2. 계주 1등 승리 카운트 추가 반영 (+1승)
+    if 'relay_data' in st.session_state and grade in st.session_state.relay_data:
+        relay_1st = st.session_state.relay_data[grade].get("1등")
+        if relay_1st:
+            scores[relay_1st] = scores.get(relay_1st, 0) + 1
+            
     return sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
 # ==========================================
@@ -73,6 +128,25 @@ def calculate_rankings(grade):
 # ==========================================
 def display_integrated_kiosk():
     st.markdown("<h1 style='text-align: center; font-size: 3.5rem; color: #1E90FF;'>⚡ 강화고 체육대회 통합 LIVE ⚡</h1>", unsafe_allow_html=True)
+    
+    # [추가] 통합 현황 상단에 실시간 계주 결과 전광판 노출
+    st.markdown("<h2 style='text-align: center; margin-top: 15px;'>🏃 학년별 계주 결과</h2>", unsafe_allow_html=True)
+    r_col1, r_col2, r_col3 = st.columns(3)
+    for g in [1, 2, 3]:
+        with [r_col1, r_col2, r_col3][g-1]:
+            r1 = st.session_state.relay_data[g]["1등"]
+            r2 = st.session_state.relay_data[g]["2등"]
+            if r1 and r2:
+                res_html = f"🥇 1등: <b>{r1}</b><br>🥈 2등: <b>{r2}</b>"
+            elif r1:
+                res_html = f"🥇 1등: <b>{r1}</b><br>🥈 2등: --"
+            else:
+                res_html = "<span style='color: #888;'>⏳ 결과 대기 중</span>"
+            st.markdown(f"<div style='background-color: #f0f2f6; padding: 15px; border-radius: 12px; text-align: center; font-size: 1.3rem; border: 2px solid #d1d5db;'>🏅 <b>{g}학년 계주</b><br><div style='margin-top:10px;'>{res_html}</div></div>", unsafe_allow_html=True)
+            
+    st.divider()
+    st.markdown("<h2 style='text-align: center; margin-top: 10px;'>🎯 경기 실시간 상황</h2>", unsafe_allow_html=True)
+    
     col1, col2, col3 = st.columns(3)
     cols = [col1, col2, col3]
     for i, m in enumerate(st.session_state.matches):
@@ -90,20 +164,20 @@ def display_grade_kiosk(g_idx):
     col_rank, col_matches = st.columns([1, 1.2])
     
     with col_rank:
-        st.markdown(f"<h3 style='text-align: center; font-size: 2.5rem;'>👑 {g_idx}학년 종합 순위</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='text-align: center; font-size: 2.5rem;'>👑 {g_idx}학년 종합 순위 (다승 순)</h3>", unsafe_allow_html=True)
         rankings = calculate_rankings(g_idx)
         if rankings:
             for i, (team, score) in enumerate(rankings):
                 if i == 0:
-                    st.markdown(f"<div style='font-size: 3rem; background: #fffbea; border: 4px solid #FFD700; padding: 20px; border-radius: 15px; margin-bottom: 15px; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);'>🥇 1위: <b>{team}</b><br><span style='font-size:2rem; color:#666;'>({score}점)</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 3rem; background: #fffbea; border: 4px solid #FFD700; padding: 20px; border-radius: 15px; margin-bottom: 15px; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);'>🥇 1위: <b>{team}</b><br><span style='font-size:2rem; color:#666;'>({score}승)</span></div>", unsafe_allow_html=True)
                 elif i == 1:
-                    st.markdown(f"<div style='font-size: 2.5rem; background: #f8f9fa; border: 4px solid #C0C0C0; padding: 15px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥈 2위: <b>{team}</b> ({score}점)</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 2.5rem; background: #f8f9fa; border: 4px solid #C0C0C0; padding: 15px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥈 2위: <b>{team}</b> ({score}승)</div>", unsafe_allow_html=True)
                 elif i == 2:
-                    st.markdown(f"<div style='font-size: 2rem; background: #fff0f5; border: 4px solid #CD7F32; padding: 15px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥉 3위: <b>{team}</b> ({score}점)</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 2rem; background: #fff0f5; border: 4px solid #CD7F32; padding: 15px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥉 3위: <b>{team}</b> ({score}승)</div>", unsafe_allow_html=True)
                 else:
-                    st.markdown(f"<div style='font-size: 1.5rem; text-align: center;'>{i+1}위: {team} ({score}점)</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 1.5rem; text-align: center;'>{i+1}위: {team} ({score}승)</div>", unsafe_allow_html=True)
         else:
-            st.info("아직 점수를 획득한 반이 없습니다.")
+            st.info("아직 승리를 기록한 반이 없습니다.")
 
     with col_matches:
         st.markdown(f"<h3 style='text-align: center; font-size: 2.5rem;'>🎯 {g_idx}학년 매치업</h3>", unsafe_allow_html=True)
@@ -179,14 +253,14 @@ def show_page():
                         st.write(f"**{m['time']} | {m['event']}** ({m['team_a']} vs {m['team_b']}) ➔ {status}")
                 
                 st.divider()
-                st.markdown(f"#### 👑 {g_idx}학년 종합 순위 (우승 유력)")
+                st.markdown(f"#### 👑 {g_idx}학년 종합 순위 (다승 순)")
                 rankings = calculate_rankings(g_idx)
                 if rankings:
                     for i, (team, score) in enumerate(rankings):
                         medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
-                        st.write(f"{medal} **{team}**: {score}점")
+                        st.write(f"{medal} **{team}**: {score}승")
                 else:
-                    st.write("아직 점수를 획득한 반이 없습니다.")
+                    st.write("아직 승리를 기록한 반이 없습니다.")
 
         st.divider()
         
@@ -215,8 +289,8 @@ def show_page():
                         st.session_state.admin_logged_in = False
                         st.rerun()
 
-                st.warning("이곳에서 승리 팀을 선택하면 전광판이 바뀌고, 구글 시트에도 영구 저장됩니다.")
-                
+                # --- 기존 토너먼트 경기 결과 입력 ---
+                st.subheader("🎯 토너먼트 종목 결과 입력")
                 for i, m in enumerate(st.session_state.matches):
                     winner_choice = st.radio(
                         f"{m['grade']}학년 {m['event']} ({m['time']})",
@@ -226,11 +300,40 @@ def show_page():
                     )
                     
                     new_winner = None if winner_choice == "선택 안함" else winner_choice
-                    
                     if st.session_state.matches[i]["winner"] != new_winner:
                         st.session_state.matches[i]["winner"] = new_winner
-                        
-                        with st.spinner("구글 시트에 저장 중입니다..."):
+                        with st.spinner("구글 시트에 저장 중..."):
                             update_winner_to_db(i, new_winner)
+                        st.rerun()
+                
+                # --- [추가] 학년별 계주 결과 입력 컴포넌트 ---
+                st.write("---")
+                st.subheader("🏃 학년별 계주 결과 입력")
+                class_options = ["선택 안함"] + [f"{i}반" for i in range(1, 9)]
+                
+                for g in [1, 2, 3]:
+                    st.markdown(f"**💡 {g}학년 계주 순위 선택**")
+                    current_1st = st.session_state.relay_data[g]["1등"]
+                    current_2nd = st.session_state.relay_data[g]["2등"]
+                    
+                    idx_1st = class_options.index(current_1st) if current_1st in class_options else 0
+                    idx_2nd = class_options.index(current_2nd) if current_2nd in class_options else 0
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        sel_1st = st.selectbox(f"{g}학년 계주 1등 반", options=class_options, index=idx_1st, key=f"relay_1st_{g}")
+                    with c2:
+                        sel_2nd = st.selectbox(f"{g}학년 계주 2등 반", options=class_options, index=idx_2nd, key=f"relay_2nd_{g}")
                         
+                    new_1st = None if sel_1st == "선택 안함" else sel_1st
+                    new_2nd = None if sel_2nd == "선택 안함" else sel_2nd
+                    
+                    if current_1st != new_1st:
+                        with st.spinner(f"{g}학년 계주 1등 저장 중..."):
+                            update_relay_to_db(g, "1등", new_1st)
+                        st.rerun()
+                        
+                    if current_2nd != new_2nd:
+                        with st.spinner(f"{g}학년 계주 2등 저장 중..."):
+                            update_relay_to_db(g, "2등", new_2nd)
                         st.rerun()
