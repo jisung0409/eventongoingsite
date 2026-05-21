@@ -44,14 +44,11 @@ def initialize_data():
         else:
             if "줄다리기" in event_str and grade_val == 3 and row['id'] == 7:
                 continue
-            
-            # 👇 [추가] 참가팀이 "전체"인 기록제 종목은 매치업 리스트에서 제외!
+                
+            # [추가됨] 참가팀이 "전체"인 기록제 종목은 매치업 전광판 리스트에서 숨김 처리!
             if str(row['team_a']).strip() == "전체":
                 continue
                 
-            matches.append({
-                "id": row['id'],
-                "time": row['time'],
             matches.append({
                 "id": row['id'],
                 "time": row['time'],
@@ -66,7 +63,6 @@ def initialize_data():
     st.session_state.matches = matches
     st.session_state.extra_events = extra_events
 
-# [핵심] 수십 번의 개별 업데이트를 하나로 합친 '일괄 저장(Bulk Update)' 함수
 def bulk_update_db(match_changes, extra_changes):
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="체육대회_경기", ttl=0)
@@ -76,11 +72,9 @@ def bulk_update_db(match_changes, extra_changes):
     df['winner'] = df['winner'].astype(object)
     df['grade'] = pd.to_numeric(df['grade'], errors='coerce').fillna(0).astype(int)
     
-    # 1. 토너먼트 경기 일괄 적용
     for match_id, new_winner in match_changes.items():
         df.loc[df['id'] == match_id, 'winner'] = "" if new_winner is None else new_winner
         
-    # 2. 기록제/점수제 종목 일괄 적용
     for (grade, event_name), new_winner in extra_changes.items():
         condition = (df['grade'] == grade) & (df['event'] == event_name)
         if condition.any():
@@ -101,11 +95,11 @@ def bulk_update_db(match_changes, extra_changes):
 # 상태 및 성적 수집 로직
 # ==========================================
 def get_match_status(match_time_str, winner):
-    # 1. 서버 위치에 상관없이 무조건 한국 시간(UTC+9)으로 고정
+    # [수정됨] 서버 위치 상관없이 무조건 한국 시간(KST)으로 고정
     KST = datetime.timezone(datetime.timedelta(hours=9))
     now = datetime.datetime.now(KST).strftime("%H:%M")
     
-    # 2. 구글 시트에 "9:00"처럼 적혀있으면 "09:00"으로 강제 변환 (문자열 비교 오류 방어)
+    # [수정됨] 9:00 처럼 적힌 시간을 09:00 으로 강제 변환하여 문자열 비교 오류 방지
     match_time_str = str(match_time_str).strip()
     if len(match_time_str) == 4 and match_time_str[1] == ":":
         match_time_str = "0" + match_time_str
@@ -311,7 +305,6 @@ def show_page():
                         st.session_state.admin_logged_in = False
                         st.rerun()
 
-                # [텍스트 수정됨] 현장 상황에 맞게 안내 문구 변경
                 st.info("💡 **운영 꿀팁:** 경기가 하나 끝날 때마다 결과를 선택하고, 맨 아래의 **[💾 실시간 결과 전광판에 반영하기]** 버튼을 누르시면 됩니다!")
                 
                 with st.form("admin_bulk_update_form"):
@@ -355,7 +348,6 @@ def show_page():
                         extra_inputs.append({"grade": g, "event": "쌩쌩이 줄넘기 1등", "val": v_ropesg})
                         st.write("")
 
-                    # [텍스트 수정됨] 버튼을 더 직관적이고 크게 변경
                     submitted = st.form_submit_button("💾 방금 선택한 결과 전광판에 즉시 반영하기", use_container_width=True)
                     
                     if submitted:
