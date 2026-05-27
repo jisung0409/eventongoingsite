@@ -4,7 +4,7 @@ import pandas as pd
 
 def show_page():
     # ==========================================
-    # 🎨 학술활동지원시스템(외부 사이트) 감성 맞춤 CSS
+    # 🎨 학술활동지원시스템 감성 맞춤 CSS
     # ==========================================
     st.markdown("""
         <style>
@@ -37,7 +37,7 @@ def show_page():
     st.write("---")
     
     # ==========================================
-    # 📖 1. 청람학술제 역사와 의의 (소개글)
+    # 📖 1. 청람학술제 역사와 의의
     # ==========================================
     st.markdown("""
         <div class="cr-card">
@@ -53,20 +53,46 @@ def show_page():
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 🔗 2. 학술활동지원시스템 외부 링크 (친구분 사이트)
+    # 🔗 2. 외부 시스템 연동 링크 섹션 (2단 구성)
     # ==========================================
-    st.markdown("### 💻 조별 활동 및 보고서 작성")
-    st.info("💡 팀원들과의 원활한 소통, 계획서 제출, 그리고 보고서 첨삭은 **학술활동지원시스템**에서 진행됩니다.")
+    st.markdown("### 🛠️ 학술제 온라인 시스템 안내")
     
-    # 외부 사이트로 이동하는 버튼 (새 탭에서 열림)
-    st.link_button(
-        "📝 청람학술제 학술활동지원시스템으로 이동하기 ➔", 
-        "https://cheongram-git-dev-cheongram.vercel.app", 
-        use_container_width=True,
-        type="primary"
-    )
+    col_link1, col_link2 = st.columns(2)
     
-    st.write("---")
+    with col_link1:
+        st.markdown("""
+            <div class="cr-card" style="margin-bottom: 10px;">
+                <div class="cr-title">📝 보고서 첨삭 및 조별 활동</div>
+                <div class="cr-text" style="min-height: 55px;">
+                    팀원들과의 실시간 소통, 학술제 계획서 제출 및 조별 보고서 첨삭 피드백은 전용 지원시스템을 이용하세요.
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        st.link_button(
+            "학술활동지원시스템 바로가기 ➔", 
+            "https://cheongram-git-dev-cheongram.vercel.app", 
+            use_container_width=True,
+            type="secondary"
+        )
+        
+    with col_link2:
+        st.markdown("""
+            <div class="cr-card" style="margin-bottom: 10px;">
+                <div class="cr-title">✍️ 강연 및 발표 세션 가신청</div>
+                <div class="cr-text" style="min-height: 55px;">
+                    청람학술제 당일 본인이 수강할 희망 강연 세션 선택과 최종 가신청서 제출은 학교 리로스쿨을 통해 진행됩니다.
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        # 학교 리로스쿨 링크 (필요시 강화고 전용 주소로 커스텀 가능)
+        st.link_button(
+            "🔥 리로스쿨 가신청하러 가기 ➔", 
+            "https://riroschool.kr", 
+            use_container_width=True,
+            type="primary"
+        )
+    
+    st.write("<br><hr>", unsafe_allow_html=True)
 
     # ==========================================
     # 📌 3. 현재 진행 단계 및 서류 제출 현황
@@ -78,7 +104,7 @@ def show_page():
             <div class="cr-card" style="height: 100%;">
                 <div class="cr-title">📢 진행 단계 안내</div>
                 <div class="cr-text">
-                    현재 청람학술제는 <b>[강연 및 발표 세션 안내 / 가신청 단계]</b>입니다. 하단의 주제 목록을 읽고 본인이 들을 세션을 골라주세요.
+                    현재 청람학술제는 <b>[강연 및 발표 세션 안내 / 가신청 단계]</b>입니다. 하단의 주제 목록을 확인한 뒤 위 버튼을 눌러 리로스쿨에서 신청을 완료해 주세요.
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -112,10 +138,6 @@ def show_page():
             "desc": "Pandas와 Streamlit을 활용하여 학교 생활이나 동아리 활동에 직접 써먹을 수 있는 유용한 웹 애플리케이션 프레임워크 설계 기법을 배웁니다."
         },
         {
-            "title": "🔐 블록체인과 현대 암호학: 분산원장의 인증 메커니즘",
-            "desc": "중앙 서버 없는 분산형 데이터 네트워크의 무결성 검증 원리를 파악하고, 차세대 인증 프레임워크의 취약점을 분석합니다."
-        },
-        {
             "title": "🌍 공간 빅데이터로 풀어내는 우리 지역 사회의 당면 과제",
             "desc": "지리 정보 시스템(GIS) 데이터와 공공 API를 매핑하여 교내 교통 안전, 지역 상권 상생 등 실질적인 사회 현제를 공학적으로 접근합니다."
         }
@@ -126,42 +148,3 @@ def show_page():
         with st.expander(topic["title"]):
             st.markdown(f"<div style='line-height:1.6; color:#4b5563; padding: 5px;'>{topic['desc']}</div>", unsafe_allow_html=True)
             st.markdown("<span style='color:#f59e0b; font-size:0.85rem;'>* 본 강연은 선착순으로 좌석이 조기 마감될 수 있습니다.</span>", unsafe_allow_html=True)
-            
-    st.write("---")
-    
-    # ==========================================
-    # ✍️ 5. 발표 세션 신청창 레이아웃 (학번/이름 분리)
-    # ==========================================
-    st.markdown("### ✍️ 발표 세션 가신청하기")
-    st.caption("※ 인당 최대 이수 가능 세션 수가 확정되지 않아, 현재는 희망 종목 복수 선택(가신청)이 가능하도록 열려 있습니다.")
-    
-    with st.form("chungram_application_form"):
-        c_id, c_name = st.columns(2)
-        with c_id:
-            student_id = st.text_input("학번 입력 (5자리)", placeholder="예: 30508", max_chars=5)
-        with c_name:
-            student_name = st.text_input("이름 입력", placeholder="예: 홍길동")
-            
-        st.write("")
-        st.markdown("#### 📚 수강 희망 세션 선택 (중복 가능)")
-        
-        options_list = [l["title"] for l in lecture_topics]
-        selected_lectures = st.multiselect(
-            "안내 탭에서 확인한 희망 강연을 모두 체크해 주세요.",
-            options=options_list,
-            placeholder="여기를 클릭하여 강연 주제를 선택하세요"
-        )
-        
-        st.write("")
-        submit_button = st.form_submit_button("🚀 학술제 가신청서 임시 제출", use_container_width=True)
-        
-        if submit_button:
-            if not student_id.strip() or not student_name.strip():
-                st.error("❌ 신청 실패: 학번과 이름을 빠짐없이 입력해 주세요.")
-            elif not selected_lectures:
-                st.warning("⚠️ 신청 불가: 수강할 강연 세션을 최소 1개 이상 선택해 주세요.")
-            else:
-                st.success(f"🎉 가신청 완료: **{student_name} ({student_id})** 학생의 가신청서가 임시 접수되었습니다.")
-                st.markdown(f"**선택한 강연 ({len(selected_lectures)}건):**")
-                for sel in selected_lectures:
-                    st.write(f"- {sel}")
