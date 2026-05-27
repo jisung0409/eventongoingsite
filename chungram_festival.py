@@ -4,7 +4,7 @@ import pandas as pd
 
 def show_page():
     # ==========================================
-    # 🎨 학술활동지원시스템 감성 맞춤 CSS
+    # 🎨 학술활동지원시스템 감성 맞춤 CSS (+ 빨간 버튼 디자인)
     # ==========================================
     st.markdown("""
         <style>
@@ -30,6 +30,27 @@ def show_page():
                 font-size: 0.95rem;
                 line-height: 1.6;
             }
+            /* 커스텀 빨간색 링크 버튼 */
+            .custom-red-btn {
+                display: block;
+                width: 100%;
+                text-align: center;
+                background-color: #ef4444; /* 예쁜 빨간색 */
+                color: #ffffff !important;
+                padding: 12px 24px;
+                border-radius: 8px;
+                text-decoration: none;
+                font-weight: 600;
+                font-size: 1rem;
+                transition: all 0.2s ease-in-out;
+                border: 1px solid #dc2626;
+                margin-bottom: 10px;
+            }
+            .custom-red-btn:hover {
+                background-color: #dc2626; /* 마우스 올렸을 때 조금 더 진해짐 */
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            }
         </style>
     """, unsafe_allow_html=True)
 
@@ -43,7 +64,7 @@ def show_page():
         <div class="cr-card">
             <div class="cr-title">📚 청람학술제란? (역사와 의의)</div>
             <div class="cr-text">
-                <b>'청출어람(靑出於藍)'</b>의 정신을 잇는 강화고등학교 청람학술제는 학생들의 자기주도적 탐구 역량และ 
+                <b>'청출어람(靑出於藍)'</b>의 정신을 잇는 강화고등학교 청람학술제는 학생들의 자기주도적 탐구 역량과 
                 비판적 사고력을 기르기 위해 마련된 지식의 장입니다.<br><br>
                 단순히 교과 지식을 암기하는 것을 넘어, 학생들이 직접 실생활의 문제를 발굴하고 창의적인 해결책을 
                 모색하는 과정을 통해 <b>미래 사회를 이끌어갈 융합형 인재</b>로 성장하는 것을 목표로 합니다. 
@@ -53,17 +74,17 @@ def show_page():
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 🔗 2. 학술활동지원시스템 외부 링크 (원래 위치)
+    # 🔗 2. 학술활동지원시스템 외부 링크 (빨간색 버튼 적용)
     # ==========================================
     st.markdown("### 💻 조별 활동 및 보고서 작성")
     st.info("💡 팀원들과의 원활한 소통, 계획서 제출, 그리고 보고서 첨삭 피드백은 전용 지원시스템을 이용하세요.")
     
-    st.link_button(
-        "📝 청람학술제 학술활동지원시스템으로 이동하기 ➔", 
-        "https://cheongram-git-dev-cheongram.vercel.app", 
-        use_container_width=True,
-        type="secondary"
-    )
+    # CSS로 디자인한 커스텀 빨간 버튼 사용
+    st.markdown("""
+        <a href="https://cheongram-git-dev-cheongram.vercel.app" target="_blank" class="custom-red-btn">
+            📝 청람학술제 학술활동지원시스템으로 이동하기 ➔
+        </a>
+    """, unsafe_allow_html=True)
     
     st.write("---")
 
@@ -77,7 +98,7 @@ def show_page():
             <div class="cr-card" style="height: 100%;">
                 <div class="cr-title">📢 진행 단계 안내</div>
                 <div class="cr-text">
-                    Currently, 청람학술제는 <b>[강연 및 발표 세션 안내 / 가신청 단계]</b>입니다. 하단의 주제 목록을 확인한 뒤 맨 아래의 신청 구역을 통해 리로스쿨에서 신청을 완료해 주세요.
+                    현재 청람학술제는 <b>[강연 및 발표 세션 안내 / 가신청 단계]</b>입니다. 하단의 주제 목록을 확인한 뒤 맨 아래의 신청 구역을 통해 리로스쿨에서 신청을 완료해 주세요.
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -125,7 +146,7 @@ def show_page():
     st.write("---")
     
     # ==========================================
-    # ✍️ 5. 발표 세션 신청 구역 (원래 가신청 위치 + 링크 버튼)
+    # ✍️ 5. 발표 세션 신청 구역 (리로스쿨 링크)
     # ==========================================
     st.markdown("### ✍️ 발표 세션 가신청하기")
     
@@ -141,7 +162,7 @@ def show_page():
     
     st.link_button(
         "🔥 리로스쿨 가신청하러 가기 ➔", 
-        "https://riroschool.kr", 
+        "https://riroschool.kr/", 
         use_container_width=True,
         type="primary"
     )
