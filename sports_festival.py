@@ -10,7 +10,7 @@ def initialize_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
     
     try:
-        df = conn.read(worksheet="체육대회_경기", ttl="10m")
+        df = conn.read(worksheet="체육대회_경기", ttl="0")
     except Exception:
         st.warning("⚠️ 현재 접속자가 많아 구글 서버와 통신이 지연되고 있습니다. 약 1분 뒤에 새로고침(F5) 해주세요.")
         st.stop()
