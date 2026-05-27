@@ -4,7 +4,7 @@ import pandas as pd
 
 def show_page():
     # ==========================================
-    # 🎨 학술활동지원시스템 감성 맞춤 CSS (+ 빨간 버튼 디자인)
+    # 🎨 학술활동지원시스템 감성 맞춤 CSS (+ 빨간 버튼 밑줄 제거)
     # ==========================================
     st.markdown("""
         <style>
@@ -35,11 +35,11 @@ def show_page():
                 display: block;
                 width: 100%;
                 text-align: center;
-                background-color: #ef4444; /* 예쁜 빨간색 */
+                background-color: #ef4444; 
                 color: #ffffff !important;
                 padding: 12px 24px;
                 border-radius: 8px;
-                text-decoration: none;
+                text-decoration: none !important; /* 👈 스트림릿 밑줄 강제 제거 */
                 font-weight: 600;
                 font-size: 1rem;
                 transition: all 0.2s ease-in-out;
@@ -47,9 +47,11 @@ def show_page():
                 margin-bottom: 10px;
             }
             .custom-red-btn:hover {
-                background-color: #dc2626; /* 마우스 올렸을 때 조금 더 진해짐 */
+                background-color: #dc2626; 
                 transform: translateY(-2px);
                 box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+                text-decoration: none !important; /* 👈 마우스 올렸을 때도 밑줄 안 생기게 방어 */
+                color: #ffffff !important;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -74,7 +76,7 @@ def show_page():
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 🔗 2. 학술활동지원시스템 외부 링크 (빨간색 버튼 적용)
+    # 🔗 2. 학술활동지원시스템 외부 링크 (빨간색 버튼)
     # ==========================================
     st.markdown("### 💻 조별 활동 및 보고서 작성")
     st.info("💡 팀원들과의 원활한 소통, 계획서 제출, 그리고 보고서 첨삭 피드백은 전용 지원시스템을 이용하세요.")
