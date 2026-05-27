@@ -8,80 +8,50 @@ st.set_page_config(page_title="강화고 행사 플랫폼", layout="wide", initi
 # ==========================================
 # 🎨 UI/UX 꾸미기 (커스텀 CSS 주입)
 # ==========================================
+# CSS 텍스트도 왼쪽으로 쫙 붙여서 버그를 원천 차단합니다.
 st.markdown("""
-    <style>
-        /* 전체 배경 부드러운 그라데이션 적용 */
-        .stApp {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        }
-        header {visibility: hidden;}
-        
-        /* 진행 중인 행사 카드 */
-        .event-card {
-            background-color: #ffffff;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-left: 8px solid #2196F3;
-            margin-bottom: 15px;
-        }
-        .event-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-        }
-        
-        /* 지난 행사 (아카이브) 카드 */
-        .archive-card {
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease;
-            border-left: 6px solid #9ca3af;
-            opacity: 0.9;
-            margin-bottom: 15px;
-        }
-        .archive-card:hover {
-            transform: translateY(-3px);
-            opacity: 1;
-        }
-        
-        /* 학사일정 스크롤 박스 */
-        .calendar-box {
-            background-color: #ffffff;
-            padding: 20px 25px;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            border-left: 8px solid #10B981; /* 에메랄드 그린 */
-            height: 400px;
-            overflow-y: auto; /* 내용이 길면 스크롤 생성 */
-        }
-        .cal-month {
-            color: #047857;
-            font-size: 1.15rem;
-            font-weight: 800;
-            margin-top: 20px;
-            margin-bottom: 8px;
-            border-bottom: 2px solid #ecfdf5;
-            padding-bottom: 5px;
-        }
-        .cal-month:first-child { margin-top: 0; }
-        .cal-item {
-            color: #4b5563;
-            font-size: 0.95rem;
-            margin-bottom: 6px;
-            line-height: 1.5;
-            padding-left: 10px;
-            text-indent: -10px;
-        }
-        
-        /* 스크롤바 디자인 */
-        .calendar-box::-webkit-scrollbar { width: 8px; }
-        .calendar-box::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .calendar-box::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
-        .calendar-box::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
-    </style>
+<style>
+.stApp { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+header { visibility: hidden; }
+
+.event-card {
+    background-color: #ffffff; padding: 25px; border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-left: 8px solid #2196F3; margin-bottom: 15px;
+}
+.event-card:hover {
+    transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.archive-card {
+    background-color: #ffffff; padding: 20px; border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s ease;
+    border-left: 6px solid #9ca3af; opacity: 0.9; margin-bottom: 15px;
+}
+.archive-card:hover { transform: translateY(-3px); opacity: 1; }
+
+.calendar-box {
+    background-color: #ffffff; padding: 20px 25px; border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    border-left: 8px solid #10B981; height: 400px; overflow-y: auto;
+}
+.cal-month {
+    color: #047857; font-size: 1.15rem; font-weight: 800;
+    margin-top: 20px; margin-bottom: 8px;
+    border-bottom: 2px solid #ecfdf5; padding-bottom: 5px;
+}
+.cal-month:first-child { margin-top: 0; }
+.cal-item {
+    color: #4b5563; font-size: 0.95rem; margin-bottom: 6px;
+    line-height: 1.5; padding-left: 10px; text-indent: -10px;
+}
+
+.calendar-box::-webkit-scrollbar { width: 8px; }
+.calendar-box::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+.calendar-box::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+.calendar-box::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+</style>
 """, unsafe_allow_html=True)
 
 # 세션 상태로 현재 활성화된 페이지 관리
@@ -100,19 +70,18 @@ if st.session_state.current_page == "home":
     st.markdown("<h1 style='text-align: center; color: #1E3A8A; font-weight: 800; font-size: 3rem;'>🏫 강화고등학교 통합 플랫폼</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #4B5563; font-size: 1.2rem; margin-bottom: 40px;'>우리 학교의 모든 행사와 일정을 한곳에서 확인하세요.</p>", unsafe_allow_html=True)
     
-    # 🌟 상단: 현재 진행 중인 행사 (풀 와이드)
     st.markdown("<h3 style='color: #111827; margin-bottom: 15px;'>🔥 현재 진행 중인 행사</h3>", unsafe_allow_html=True)
     
     st.markdown("""
-        <div class="event-card">
-            <h2 style='margin: 0; color: #1E40AF;'>🌐 제1회 청람학술제</h2>
-            <p style='margin: 10px 0 5px 0; color: #3B82F6; font-size: 1.15rem; font-weight: 600;'>
-                현재 강연 및 발표 세션 안내와 가신청이 진행 중입니다.
-            </p>
-            <p style='margin: 0; color: #6B7280; font-size: 0.95rem;'>
-                👉 진로와 관심사에 맞는 세션을 둘러보고 늦지 않게 신청서를 제출해 주세요!
-            </p>
-        </div>
+<div class="event-card">
+    <h2 style='margin: 0; color: #1E40AF;'>🌐 제1회 청람학술제</h2>
+    <p style='margin: 10px 0 5px 0; color: #3B82F6; font-size: 1.15rem; font-weight: 600;'>
+        현재 강연 및 발표 세션 안내와 가신청이 진행 중입니다.
+    </p>
+    <p style='margin: 0; color: #6B7280; font-size: 0.95rem;'>
+        👉 진로와 관심사에 맞는 세션을 둘러보고 늦지 않게 신청서를 제출해 주세요!
+    </p>
+</div>
     """, unsafe_allow_html=True)
     
     if st.button("🚀 청람학술제 바로 입장하기", use_container_width=True, type="primary"):
@@ -120,95 +89,38 @@ if st.session_state.current_page == "home":
         
     st.markdown("<br><hr style='border: 1px solid #D1D5DB; margin: 20px 0 30px 0;'>", unsafe_allow_html=True)
     
-    # 🌟 하단: 2단 레이아웃 (지난 행사 기록 vs 학사일정)
     col_left, col_right = st.columns([1, 1.2])
     
     with col_left:
         st.markdown("<h3 style='color: #4B5563; margin-bottom: 15px;'>📁 지난 행사 기록</h3>", unsafe_allow_html=True)
         
-        # 1번 박스 (체육대회)
         st.markdown("""
-            <div class="archive-card">
-                <b style='color: #374151; font-size: 1.1rem;'>🏆 2026 체육대회 (종료)</b><br>
-                <div style='font-size: 0.9rem; color: #6B7280; line-height: 1.5; margin-top: 5px;'>
-                    열정 넘쳤던 학년별 경기 결과와 최종 종합 순위를 다시 열람할 수 있습니다.
-                </div>
-            </div>
+<div class="archive-card">
+    <b style='color: #374151; font-size: 1.1rem;'>🏆 2026 체육대회 (종료)</b><br>
+    <div style='font-size: 0.9rem; color: #6B7280; line-height: 1.5; margin-top: 5px;'>
+        열정 넘쳤던 학년별 경기 결과와 최종 종합 순위를 다시 열람할 수 있습니다.
+    </div>
+</div>
         """, unsafe_allow_html=True)
+        
         if st.button("📊 체육대회 전광판 아카이브", use_container_width=True):
             navigate_to("sports")
             
         st.write("")
         
-        # 2번 박스 (빈 공간 대체용 안내)
         st.markdown("""
-            <div class="archive-card" style="border-left: 6px solid #e5e7eb; background-color: #f9fafb; display: flex; align-items: center; justify-content: center; height: 110px;">
-                <div style="text-align: center; color: #9ca3af; font-size: 1rem; font-weight: 600;">
-                    🔜 다음 행사를 준비 중입니다
-                </div>
-            </div>
+<div class="archive-card" style="border-left: 6px solid #e5e7eb; background-color: #f9fafb; display: flex; align-items: center; justify-content: center; height: 110px;">
+    <div style="text-align: center; color: #9ca3af; font-size: 1rem; font-weight: 600;">
+        🔜 다음 행사를 준비 중입니다
+    </div>
+</div>
         """, unsafe_allow_html=True)
 
     with col_right:
         st.markdown("<h3 style='color: #047857; margin-bottom: 15px;'>📅 2026~2027 학사일정</h3>", unsafe_allow_html=True)
         
-        # 학사일정 스크롤 박스 (이미지 데이터 기반)
+        # 👇 이 부분이 핵심! 띄어쓰기를 전부 없애서 왼쪽 벽에 밀착시켰습니다.
         st.markdown("""
-            <div class="calendar-box">
-                <div class="cal-month">2026년 6월</div>
-                <div class="cal-item"><b>03일:</b> 지방선거</div>
-                <div class="cal-item"><b>04일:</b> 전국연합 대수능(전학년)</div>
-                <div class="cal-item"><b>30일:</b> 1학기 기말고사(1일차)</div>
-                
-                <div class="cal-month">2026년 7월</div>
-                <div class="cal-item"><b>01일~03일:</b> 1학기 기말고사(2일~4일차)</div>
-                <div class="cal-item"><b>08일:</b> 전국연합(3학년)</div>
-                <div class="cal-item"><b>13일~15일:</b> 청람학술제(학교지정과목 1,2학년)</div>
-                <div class="cal-item"><b>21일:</b> 방학식</div>
-                
-                <div class="cal-month">2026년 8월</div>
-                <div class="cal-item"><b>12일:</b> 개학</div>
-                <div class="cal-item"><b>17일:</b> 대체공휴일</div>
-                
-                <div class="cal-month">2026년 9월</div>
-                <div class="cal-item"><b>02일:</b> 전국연합, 대수능 모의고사(전학년)</div>
-                <div class="cal-item"><b>23일:</b> 재량휴업일</div>
-                <div class="cal-item"><b>30일:</b> 중간고사(1,2학년, 1일차)</div>
-                
-                <div class="cal-month">2026년 10월</div>
-                <div class="cal-item"><b>01일~02일:</b> 중간시험(1,2학년, 2~3일차)</div>
-                <div class="cal-item"><b>05일:</b> 대체공휴일</div>
-                <div class="cal-item"><b>13일~15일:</b> 수학여행(2학년)</div>
-                <div class="cal-item"><b>14일~15일:</b> 진로캠프(1학년)</div>
-                <div class="cal-item"><b>16일:</b> 재량휴업일</div>
-                <div class="cal-item"><b>20일:</b> 전국연합(전학년)</div>
-                
-                <div class="cal-month">2026년 11월</div>
-                <div class="cal-item"><b>19일:</b> 대학수학능력시험(재량휴업일)</div>
-                <div class="cal-item"><b>20일:</b> 재량휴업일</div>
-                <div class="cal-item"><b>24일~27일:</b> 2학기 학기말고사(3학년)</div>
-                
-                <div class="cal-month">2026년 12월</div>
-                <div class="cal-item"><b>08일~11일:</b> 2학기 기말고사(1,2학년)</div>
-                <div class="cal-item"><b>24일:</b> 마리마당 축제</div>
-                <div class="cal-item"><b>30일:</b> 방학식</div>
-                
-                <div class="cal-month">2027년 1월</div>
-                <div class="cal-item"><b>04일:</b> 신입생 예비소집(예정)</div>
-                <div class="cal-item"><b>18일:</b> 개학식</div>
-                <div class="cal-item"><b>22일:</b> 종업식 및 졸업식</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-# ------------------------------------------
-# 🔄 페이지 라우팅 처리
-# ------------------------------------------
-elif st.session_state.current_page == "chungram":
-    if st.button("⬅️ 메인 화면으로 돌아가기", key="back_to_home_cr"):
-        navigate_to("home")
-    chungram.show_page()
-
-elif st.session_state.current_page == "sports":
-    if st.button("⬅️ 메인 화면으로 돌아가기", key="back_to_home_sp"):
-        navigate_to("home")
-    sports.show_page()
+<div class="calendar-box">
+    <div class="cal-month">2026년 6월</div>
+    <div class="cal-item"><b>03일:</b> 지방선거</div>
