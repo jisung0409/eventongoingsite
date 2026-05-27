@@ -8,7 +8,6 @@ st.set_page_config(page_title="강화고 행사 플랫폼", layout="wide", initi
 # ==========================================
 # 🎨 UI/UX 꾸미기 (커스텀 CSS 주입)
 # ==========================================
-# CSS 텍스트도 왼쪽으로 쫙 붙여서 버그를 원천 차단합니다.
 st.markdown("""
 <style>
 .stApp { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
@@ -119,8 +118,62 @@ if st.session_state.current_page == "home":
     with col_right:
         st.markdown("<h3 style='color: #047857; margin-bottom: 15px;'>📅 2026~2027 학사일정</h3>", unsafe_allow_html=True)
         
-        # 👇 이 부분이 핵심! 띄어쓰기를 전부 없애서 왼쪽 벽에 밀착시켰습니다.
         st.markdown("""
 <div class="calendar-box">
     <div class="cal-month">2026년 6월</div>
     <div class="cal-item"><b>03일:</b> 지방선거</div>
+    <div class="cal-item"><b>04일:</b> 전국연합 대수능(전학년)</div>
+    <div class="cal-item"><b>30일:</b> 1학기 기말고사(1일차)</div>
+    
+    <div class="cal-month">2026년 7월</div>
+    <div class="cal-item"><b>01일~03일:</b> 1학기 기말고사(2일~4일차)</div>
+    <div class="cal-item"><b>08일:</b> 전국연합(3학년)</div>
+    <div class="cal-item"><b>13일~15일:</b> 청람학술제(학교지정과목 1,2학년)</div>
+    <div class="cal-item"><b>21일:</b> 방학식</div>
+    
+    <div class="cal-month">2026년 8월</div>
+    <div class="cal-item"><b>12일:</b> 개학</div>
+    <div class="cal-item"><b>17일:</b> 대체공휴일</div>
+    
+    <div class="cal-month">2026년 9월</div>
+    <div class="cal-item"><b>02일:</b> 전국연합, 대수능 모의고사(전학년)</div>
+    <div class="cal-item"><b>23일:</b> 재량휴업일</div>
+    <div class="cal-item"><b>30일:</b> 중간고사(1,2학년, 1일차)</div>
+    
+    <div class="cal-month">2026년 10월</div>
+    <div class="cal-item"><b>01일~02일:</b> 중간시험(1,2학년, 2~3일차)</div>
+    <div class="cal-item"><b>05일:</b> 대체공휴일</div>
+    <div class="cal-item"><b>13일~15일:</b> 수학여행(2학년)</div>
+    <div class="cal-item"><b>14일~15일:</b> 진로캠프(1학년)</div>
+    <div class="cal-item"><b>16일:</b> 재량휴업일</div>
+    <div class="cal-item"><b>20일:</b> 전국연합(전학년)</div>
+    
+    <div class="cal-month">2026년 11월</div>
+    <div class="cal-item"><b>19일:</b> 대학수학능력시험(재량휴업일)</div>
+    <div class="cal-item"><b>20일:</b> 재량휴업일</div>
+    <div class="cal-item"><b>24일~27일:</b> 2학기 학기말고사(3학년)</div>
+    
+    <div class="cal-month">2026년 12월</div>
+    <div class="cal-item"><b>08일~11일:</b> 2학기 기말고사(1,2학년)</div>
+    <div class="cal-item"><b>24일:</b> 마리마당 축제</div>
+    <div class="cal-item"><b>30일:</b> 방학식</div>
+    
+    <div class="cal-month">2027년 1월</div>
+    <div class="cal-item"><b>04일:</b> 신입생 예비소집(예정)</div>
+    <div class="cal-item"><b>18일:</b> 개학식</div>
+    <div class="cal-item"><b>22일:</b> 종업식 및 졸업식</div>
+</div>
+        """, unsafe_allow_html=True)
+
+# ------------------------------------------
+# 🔄 페이지 라우팅 처리
+# ------------------------------------------
+elif st.session_state.current_page == "chungram":
+    if st.button("⬅️ 메인 화면으로 돌아가기", key="back_to_home_cr"):
+        navigate_to("home")
+    chungram.show_page()
+
+elif st.session_state.current_page == "sports":
+    if st.button("⬅️ 메인 화면으로 돌아가기", key="back_to_home_sp"):
+        navigate_to("home")
+    sports.show_page()
