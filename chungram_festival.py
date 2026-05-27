@@ -37,13 +37,13 @@ def show_page():
     st.write("---")
     
     # ==========================================
-    # 📖 1. 청람학술제 역사와 의의
+    # 📖 1. 청람학술제 역사와 의의 (소개글)
     # ==========================================
     st.markdown("""
         <div class="cr-card">
             <div class="cr-title">📚 청람학술제란? (역사와 의의)</div>
             <div class="cr-text">
-                <b>'청출어람(靑出於藍)'</b>의 정신을 잇는 강화고등학교 청람학술제는 학생들의 자기주도적 탐구 역량과 
+                <b>'청출어람(靑出於藍)'</b>의 정신을 잇는 강화고등학교 청람학술제는 학생들의 자기주도적 탐구 역량และ 
                 비판적 사고력을 기르기 위해 마련된 지식의 장입니다.<br><br>
                 단순히 교과 지식을 암기하는 것을 넘어, 학생들이 직접 실생활의 문제를 발굴하고 창의적인 해결책을 
                 모색하는 과정을 통해 <b>미래 사회를 이끌어갈 융합형 인재</b>로 성장하는 것을 목표로 합니다. 
@@ -53,46 +53,19 @@ def show_page():
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 🔗 2. 외부 시스템 연동 링크 섹션 (2단 구성)
+    # 🔗 2. 학술활동지원시스템 외부 링크 (원래 위치)
     # ==========================================
-    st.markdown("### 🛠️ 학술제 온라인 시스템 안내")
+    st.markdown("### 💻 조별 활동 및 보고서 작성")
+    st.info("💡 팀원들과의 원활한 소통, 계획서 제출, 그리고 보고서 첨삭 피드백은 전용 지원시스템을 이용하세요.")
     
-    col_link1, col_link2 = st.columns(2)
+    st.link_button(
+        "📝 청람학술제 학술활동지원시스템으로 이동하기 ➔", 
+        "https://cheongram-git-dev-cheongram.vercel.app", 
+        use_container_width=True,
+        type="secondary"
+    )
     
-    with col_link1:
-        st.markdown("""
-            <div class="cr-card" style="margin-bottom: 10px;">
-                <div class="cr-title">📝 보고서 첨삭 및 조별 활동</div>
-                <div class="cr-text" style="min-height: 55px;">
-                    팀원들과의 실시간 소통, 학술제 계획서 제출 및 조별 보고서 첨삭 피드백은 전용 지원시스템을 이용하세요.
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-        st.link_button(
-            "학술활동지원시스템 바로가기 ➔", 
-            "https://cheongram-git-dev-cheongram.vercel.app", 
-            use_container_width=True,
-            type="secondary"
-        )
-        
-    with col_link2:
-        st.markdown("""
-            <div class="cr-card" style="margin-bottom: 10px;">
-                <div class="cr-title">✍️ 강연 및 발표 세션 가신청</div>
-                <div class="cr-text" style="min-height: 55px;">
-                    청람학술제 당일 본인이 수강할 희망 강연 세션 선택과 최종 가신청서 제출은 학교 리로스쿨을 통해 진행됩니다.
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-        # 학교 리로스쿨 링크 (필요시 강화고 전용 주소로 커스텀 가능)
-        st.link_button(
-            "🔥 리로스쿨 가신청하러 가기 ➔", 
-            "https://riroschool.kr", 
-            use_container_width=True,
-            type="primary"
-        )
-    
-    st.write("<br><hr>", unsafe_allow_html=True)
+    st.write("---")
 
     # ==========================================
     # 📌 3. 현재 진행 단계 및 서류 제출 현황
@@ -104,7 +77,7 @@ def show_page():
             <div class="cr-card" style="height: 100%;">
                 <div class="cr-title">📢 진행 단계 안내</div>
                 <div class="cr-text">
-                    현재 청람학술제는 <b>[강연 및 발표 세션 안내 / 가신청 단계]</b>입니다. 하단의 주제 목록을 확인한 뒤 위 버튼을 눌러 리로스쿨에서 신청을 완료해 주세요.
+                    Currently, 청람학술제는 <b>[강연 및 발표 세션 안내 / 가신청 단계]</b>입니다. 하단의 주제 목록을 확인한 뒤 맨 아래의 신청 구역을 통해 리로스쿨에서 신청을 완료해 주세요.
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -138,8 +111,8 @@ def show_page():
             "desc": "Pandas와 Streamlit을 활용하여 학교 생활이나 동아리 활동에 직접 써먹을 수 있는 유용한 웹 애플리케이션 프레임워크 설계 기법을 배웁니다."
         },
         {
-            "title": "🌍 공간 빅데이터로 풀어내는 우리 지역 사회의 당면 과제",
-            "desc": "지리 정보 시스템(GIS) 데이터와 공공 API를 매핑하여 교내 교통 안전, 지역 상권 상생 등 실질적인 사회 현제를 공학적으로 접근합니다."
+            "title": "🔐 블록체인과 현대 암호학: 분산원장의 인증 메커니즘",
+            "desc": "중앙 서버 없는 분산형 데이터 네트워크의 무결성 검증 원리를 파악하고, 차세대 인증 프레임워크의 취약점을 분석합니다."
         }
     ]
     
@@ -148,3 +121,27 @@ def show_page():
         with st.expander(topic["title"]):
             st.markdown(f"<div style='line-height:1.6; color:#4b5563; padding: 5px;'>{topic['desc']}</div>", unsafe_allow_html=True)
             st.markdown("<span style='color:#f59e0b; font-size:0.85rem;'>* 본 강연은 선착순으로 좌석이 조기 마감될 수 있습니다.</span>", unsafe_allow_html=True)
+            
+    st.write("---")
+    
+    # ==========================================
+    # ✍️ 5. 발표 세션 신청 구역 (원래 가신청 위치 + 링크 버튼)
+    # ==========================================
+    st.markdown("### ✍️ 발표 세션 가신청하기")
+    
+    st.markdown("""
+        <div class="cr-card" style="border-left: 4px solid #2196F3; margin-bottom: 15px;">
+            <div class="cr-title" style="color: #2196F3;">📋 리로스쿨 가신청 안내</div>
+            <div class="cr-text">
+                청람학술제 당일 본인이 수강할 희망 강연 세션 선택과 최종 가신청서 제출은 <b>학교 리로스쿨</b>을 통해 진행됩니다.<br>
+                위의 강연 안내 목록을 확인하신 후 아래 버튼을 눌러 리로스쿨 시스템에서 가신청을 완료해 주세요.
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.link_button(
+        "🔥 리로스쿨 가신청하러 가기 ➔", 
+        "https://riroschool.kr", 
+        use_container_width=True,
+        type="primary"
+    )
