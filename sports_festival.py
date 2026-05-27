@@ -145,21 +145,26 @@ def display_integrated_kiosk():
     with col_relay:
         st.markdown("<h3 style='text-align: center; margin-top: 0;'>📊 학년별 주요 기록</h3>", unsafe_allow_html=True)
         for g in [1, 2, 3]:
-            events = st.session_state.extra_events[g]
-            lines = []
-            if events["계주 1등"] or events["계주 2등"]:
-                r1 = events["계주 1등"] if events["계주 1등"] else "--"
-                r2 = events["계주 2등"] if events["계주 2등"] else "--"
-                lines.append(f"🏃 계주 ➔ 1등: <b>{r1}</b> / 2등: <b>{r2}</b>")
+            # 1, 2학년 미저장 안내
+            if g in [1, 2]:
+                content_html = "<div style='text-align: center; padding: 15px 0; color: #888; font-size: 0.95rem;'>해당 학년의 체육대회 결과는<br>저장되지 않았습니다.</div>"
+                st.markdown(f"<div style='background-color: #f0f2f6; padding: 12px; border-radius: 12px; font-size: 1rem; margin-bottom: 12px; border: 2px solid #d1d5db;'>🏅 <b style='font-size:1.1rem;'>{g}학년 종합 결과</b><br>{content_html}</div>", unsafe_allow_html=True)
             else:
-                lines.append("🏃 계주 ➔ <span style='color:#888;'>결과 대기 중</span>")
+                events = st.session_state.extra_events[g]
+                lines = []
+                if events["계주 1등"] or events["계주 2등"]:
+                    r1 = events["계주 1등"] if events["계주 1등"] else "--"
+                    r2 = events["계주 2등"] if events["계주 2등"] else "--"
+                    lines.append(f"🏃 계주 ➔ 1등: <b>{r1}</b> / 2등: <b>{r2}</b>")
+                else:
+                    lines.append("🏃 계주 ➔ <span style='color:#888;'>결과 대기 중</span>")
+                    
+                lines.append(f" rope 8자 ➔ <b>{events['8자 줄넘기 1등'] if events['8자 줄넘기 1등'] else '--'}</b>")
+                lines.append(f"⏱️ 쌩쌩이 ➔ <b>{events['쌩쌩이 줄넘기 1등'] if events['쌩쌩이 줄넘기 1등'] else '--'}</b>")
+                lines.append(f"💪 줄다리기 ➔ <b>{events['줄다리기 1등'] if events['줄다리기 1등'] else '--'}</b>")
                 
-            lines.append(f" rope 8자 ➔ <b>{events['8자 줄넘기 1등'] if events['8자 줄넘기 1등'] else '--'}</b>")
-            lines.append(f"⏱️ 쌩쌩이 ➔ <b>{events['쌩쌩이 줄넘기 1등'] if events['쌩쌩이 줄넘기 1등'] else '--'}</b>")
-            lines.append(f"💪 줄다리기 ➔ <b>{events['줄다리기 1등'] if events['줄다리기 1등'] else '--'}</b>")
-            
-            content_html = "<br>".join(lines)
-            st.markdown(f"<div style='background-color: #f0f2f6; padding: 12px; border-radius: 12px; font-size: 1rem; margin-bottom: 12px; border: 2px solid #d1d5db;'>🏅 <b style='font-size:1.1rem;'>{g}학년 종합 결과</b><br><div style='margin-top:8px; line-height: 1.6;'>{content_html}</div></div>", unsafe_allow_html=True)
+                content_html = "<br>".join(lines)
+                st.markdown(f"<div style='background-color: #f0f2f6; padding: 12px; border-radius: 12px; font-size: 1rem; margin-bottom: 12px; border: 2px solid #d1d5db;'>🏅 <b style='font-size:1.1rem;'>{g}학년 종합 결과</b><br><div style='margin-top:8px; line-height: 1.6;'>{content_html}</div></div>", unsafe_allow_html=True)
             
     with col_matches:
         st.markdown("<h3 style='text-align: center; margin-top: 0;'>🎯 실시간 매치업 현황</h3>", unsafe_allow_html=True)
@@ -180,20 +185,25 @@ def display_grade_kiosk(g_idx):
     
     with col_rank:
         st.markdown(f"<h3 style='text-align: center; font-size: 2.5rem;'>👑 {g_idx}학년 종합 순위 예측</h3>", unsafe_allow_html=True)
-        rankings = calculate_rankings(g_idx)
-        if rankings:
-            for i, (team, stats) in enumerate(rankings):
-                achievements_str = ", ".join(stats["achievements"])
-                if i == 0:
-                    st.markdown(f"<div style='font-size: 2.8rem; background: #fffbea; border: 4px solid #FFD700; padding: 18px; border-radius: 15px; margin-bottom: 15px; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);'>🥇 1위: <b>{team}</b><br><span style='font-size:1.4rem; color:#d4af37;'>🏆 {achievements_str}</span></div>", unsafe_allow_html=True)
-                elif i == 1:
-                    st.markdown(f"<div style='font-size: 2.3rem; background: #f8f9fa; border: 4px solid #C0C0C0; padding: 14px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥈 2위: <b>{team}</b><br><span style='font-size:1.2rem; color:#666;'>🏆 {achievements_str}</span></div>", unsafe_allow_html=True)
-                elif i == 2:
-                    st.markdown(f"<div style='font-size: 1.9rem; background: #fff0f5; border: 4px solid #CD7F32; padding: 14px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥉 3위: <b>{team}</b><br><span style='font-size:1rem; color:#666;'>🏆 {achievements_str}</span></div>", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<div style='font-size: 1.4rem; text-align: center; margin-bottom: 10px;'>{i+1}위: {team} <span style='font-size:0.95rem; color:#888;'>({achievements_str})</span></div>", unsafe_allow_html=True)
+        
+        # 1, 2학년 미저장 안내
+        if g_idx in [1, 2]:
+            st.info("해당 학년의 체육대회 결과는 저장되지 않았습니다.")
         else:
-            st.info("아직 성적을 기록한 반이 없습니다.")
+            rankings = calculate_rankings(g_idx)
+            if rankings:
+                for i, (team, stats) in enumerate(rankings):
+                    achievements_str = ", ".join(stats["achievements"])
+                    if i == 0:
+                        st.markdown(f"<div style='font-size: 2.8rem; background: #fffbea; border: 4px solid #FFD700; padding: 18px; border-radius: 15px; margin-bottom: 15px; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);'>🥇 1위: <b>{team}</b><br><span style='font-size:1.4rem; color:#d4af37;'>🏆 {achievements_str}</span></div>", unsafe_allow_html=True)
+                    elif i == 1:
+                        st.markdown(f"<div style='font-size: 2.3rem; background: #f8f9fa; border: 4px solid #C0C0C0; padding: 14px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥈 2위: <b>{team}</b><br><span style='font-size:1.2rem; color:#666;'>🏆 {achievements_str}</span></div>", unsafe_allow_html=True)
+                    elif i == 2:
+                        st.markdown(f"<div style='font-size: 1.9rem; background: #fff0f5; border: 4px solid #CD7F32; padding: 14px; border-radius: 15px; margin-bottom: 15px; text-align: center;'>🥉 3위: <b>{team}</b><br><span style='font-size:1rem; color:#666;'>🏆 {achievements_str}</span></div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<div style='font-size: 1.4rem; text-align: center; margin-bottom: 10px;'>{i+1}위: {team} <span style='font-size:0.95rem; color:#888;'>({achievements_str})</span></div>", unsafe_allow_html=True)
+            else:
+                st.info("아직 성적을 기록한 반이 없습니다.")
 
     with col_matches:
         st.markdown(f"<h3 style='text-align: center; font-size: 2.5rem;'>🎯 {g_idx}학년 매치업</h3>", unsafe_allow_html=True)
@@ -269,14 +279,19 @@ def show_page():
                 
                 st.divider()
                 st.markdown(f"#### 👑 {g_idx}학년 종합 순위 예측")
-                rankings = calculate_rankings(g_idx)
-                if rankings:
-                    for i, (team, stats) in enumerate(rankings):
-                        achievements_str = ", ".join(stats["achievements"])
-                        medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
-                        st.write(f"{medal} **{team}** ➔ 🏆 {achievements_str}")
+                
+                # 1, 2학년 미저장 안내
+                if g_idx in [1, 2]:
+                    st.info("해당 학년의 체육대회 결과는 저장되지 않았습니다.")
                 else:
-                    st.write("아직 성적을 기록한 반이 없습니다.")
+                    rankings = calculate_rankings(g_idx)
+                    if rankings:
+                        for i, (team, stats) in enumerate(rankings):
+                            achievements_str = ", ".join(stats["achievements"])
+                            medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
+                            st.write(f"{medal} **{team}** ➔ 🏆 {achievements_str}")
+                    else:
+                        st.write("아직 성적을 기록한 반이 없습니다.")
 
         st.divider()
         
