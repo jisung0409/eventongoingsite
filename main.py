@@ -1,9 +1,58 @@
 import streamlit as st
+import datetime
 import chungram_festival as chungram
 import sports_festival as sports
 
 # 앱 전체 설정
 st.set_page_config(page_title="강화고 행사 플랫폼", layout="wide", initial_sidebar_state="collapsed")
+
+# ==========================================
+# ⏱️ 학사일정 자동 D-Day 계산 로직
+# ==========================================
+def get_upcoming_event():
+    # 한국 시간(KST) 기준으로 오늘 날짜 가져오기
+    KST = datetime.timezone(datetime.timedelta(hours=9))
+    today = datetime.datetime.now(KST).date()
+    
+    # 학사일정 데이터베이스 (날짜, 일정명)
+    schedules = [
+        (datetime.date(2026, 6, 3), "지방선거"),
+        (datetime.date(2026, 6, 4), "전국연합 대수능(전학년)"),
+        (datetime.date(2026, 6, 30), "1학기 기말고사(1일차)"),
+        (datetime.date(2026, 7, 1), "1학기 기말고사(2일~4일차)"),
+        (datetime.date(2026, 7, 8), "전국연합(3학년)"),
+        (datetime.date(2026, 7, 13), "청람학술제(학교지정과목)"),
+        (datetime.date(2026, 7, 21), "방학식"),
+        (datetime.date(2026, 8, 12), "개학"),
+        (datetime.date(2026, 8, 17), "대체공휴일"),
+        (datetime.date(2026, 9, 2), "전국연합 모의고사(전학년)"),
+        (datetime.date(2026, 9, 23), "재량휴업일"),
+        (datetime.date(2026, 9, 30), "중간고사(1,2학년, 1일차)"),
+        (datetime.date(2026, 10, 1), "중간고사(1,2학년, 2~3일차)"),
+        (datetime.date(2026, 10, 5), "대체공휴일"),
+        (datetime.date(2026, 10, 13), "수학여행(2학년) / 진로캠프(1학년)"),
+        (datetime.date(2026, 10, 16), "재량휴업일"),
+        (datetime.date(2026, 10, 20), "전국연합(전학년)"),
+        (datetime.date(2026, 11, 19), "대학수학능력시험"),
+        (datetime.date(2026, 11, 20), "재량휴업일"),
+        (datetime.date(2026, 11, 24), "2학기 학기말고사(3학년)"),
+        (datetime.date(2026, 12, 8), "2학기 기말고사(1,2학년)"),
+        (datetime.date(2026, 12, 24), "마리마당 축제"),
+        (datetime.date(2026, 12, 30), "방학식"),
+        (datetime.date(2027, 1, 4), "신입생 예비소집"),
+        (datetime.date(2027, 1, 18), "개학식"),
+        (datetime.date(2027, 1, 22), "종업식 및 졸업식")
+    ]
+    
+    # 오늘 날짜와 비교하여 가장 가까운 미래 일정 찾기
+    for date_obj, title in schedules:
+        if date_obj >= today:
+            days_left = (date_obj - today).days
+            d_day_str = "D-Day" if days_left == 0 else f"D-{days_left}"
+            date_str = f"{date_obj.month}월 {date_obj.day}일"
+            return title, date_str, d_day_str
+            
+    return "예정된 일정이 없습니다.", "", ""
 
 # ==========================================
 # 🎨 UI/UX 꾸미기 (커스텀 CSS 주입)
@@ -19,7 +68,8 @@ header { visibility: hidden; }
 .archive-card { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s ease; border-left: 6px solid #9ca3af; opacity: 0.9; margin-bottom: 15px; }
 .archive-card:hover { transform: translateY(-3px); opacity: 1; }
 
-.calendar-box { background-color: #ffffff; padding: 20px 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 8px solid #10B981; height: 400px; overflow-y: auto; }
+.upcoming-box { background-color: #ecfdf5; border: 2px solid #10B981; border-radius: 12px; padding: 15px 20px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.1); }
+.calendar-box { background-color: #ffffff; padding: 20px 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 8px solid #10B981; height: 380px; overflow-y: auto; }
 .cal-month { color: #047857; font-size: 1.15rem; font-weight: 800; margin-top: 20px; margin-bottom: 8px; border-bottom: 2px solid #ecfdf5; padding-bottom: 5px; }
 .cal-month:first-child { margin-top: 0; }
 .cal-item { color: #4b5563; font-size: 0.95rem; margin-bottom: 6px; line-height: 1.5; padding-left: 10px; text-indent: -10px; }
@@ -70,7 +120,7 @@ if st.session_state.current_page == "home":
         st.markdown("""
 <div class="archive-card">
 <b style='color: #374151; font-size: 1.1rem;'>🏆 2026 체육대회 (종료)</b><br>
-<div style='font-size: 0.9rem; color: #6B7280; line-height: 1.5; margin-top: 5px;'>열정 넘쳤던 학년별 경기 결과와 최종 종합 순위를 다시 열람할 수 있습니다.</div>
+<div style='font-size: 0.9rem; color: #6B7280; line-height: 1.5; margin-top: 5px;'>학년별 경기 결과와 최종 종합 순위를 다시 열람할 수 있습니다.</div>
 </div>
         """, unsafe_allow_html=True)
         
@@ -88,7 +138,23 @@ if st.session_state.current_page == "home":
     with col_right:
         st.markdown("<h3 style='color: #047857; margin-bottom: 15px;'>📅 2026~2027 학사일정</h3>", unsafe_allow_html=True)
         
-        # [핵심 수정] 단 1칸의 띄어쓰기도 허용하지 않고 왼쪽 벽에 완전히 밀착!
+        # [기능 추가] 다가오는 일정 D-Day 배너
+        up_title, up_date, up_dday = get_upcoming_event()
+        if up_title:
+            st.markdown(f"""
+<div class="upcoming-box">
+    <div>
+        <span style="color: #047857; font-weight: bold; font-size: 0.85rem;">🔔 가장 가까운 학사일정</span><br>
+        <span style="color: #111827; font-weight: 800; font-size: 1.15rem;">{up_title}</span>
+        <span style="color: #6b7280; font-size: 0.9rem; margin-left: 5px;">({up_date})</span>
+    </div>
+    <div style="background-color: #10B981; color: white; padding: 6px 14px; border-radius: 20px; font-weight: 900; font-size: 1.2rem; letter-spacing: 1px;">
+        {up_dday}
+    </div>
+</div>
+            """, unsafe_allow_html=True)
+        
+        # 기존 학사일정 스크롤 박스
         st.markdown("""
 <div class="calendar-box">
 <div class="cal-month">2026년 6월</div>
