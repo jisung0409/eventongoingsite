@@ -39,7 +39,7 @@ def show_page():
                 color: #ffffff !important;
                 padding: 12px 24px;
                 border-radius: 8px;
-                text-decoration: none !important; /* 👈 스트림릿 밑줄 강제 제거 */
+                text-decoration: none !important;
                 font-weight: 600;
                 font-size: 1rem;
                 transition: all 0.2s ease-in-out;
@@ -50,7 +50,7 @@ def show_page():
                 background-color: #dc2626; 
                 transform: translateY(-2px);
                 box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-                text-decoration: none !important; /* 👈 마우스 올렸을 때도 밑줄 안 생기게 방어 */
+                text-decoration: none !important;
                 color: #ffffff !important;
             }
         </style>
@@ -84,7 +84,7 @@ def show_page():
     # CSS로 디자인한 커스텀 빨간 버튼 사용
     st.markdown("""
         <a href="https://cheongram-git-dev-cheongram.vercel.app" target="_blank" class="custom-red-btn">
-            📝 청람학술제 학술활동지원시스템으로 이동하기(담당자 : 30520 최우진) ➔
+            📝 청람학술제 학술활동지원시스템으로 이동하기 ➔
         </a>
     """, unsafe_allow_html=True)
     
@@ -148,7 +148,7 @@ def show_page():
     st.write("---")
     
     # ==========================================
-    # ✍️ 5. 발표 세션 신청 구역 (리로스쿨 링크)
+    # ✍️ 5. 발표 세션 신청 구역 (준비 중 알림)
     # ==========================================
     st.markdown("### ✍️ 발표 세션 가신청하기")
     
@@ -162,9 +162,6 @@ def show_page():
         </div>
     """, unsafe_allow_html=True)
     
-    st.link_button(
-        "🔥 리로스쿨 가신청하러 가기 ➔", 
-        "https://riroschool.kr/", 
-        use_container_width=True,
-        type="primary"
-    )
+    # [수정됨] 링크 버튼 대신 알림(Toast)이 뜨는 일반 버튼으로 교체
+    if st.button("🔥 리로스쿨 가신청하러 가기 (오픈 준비 중) ➔", use_container_width=True, type="primary"):
+        st.toast("⏳ 아직 리로스쿨 신청 페이지가 열리지 않았습니다. 추후 공지를 확인해 주세요!", icon="🔔")
