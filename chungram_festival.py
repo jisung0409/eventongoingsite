@@ -83,7 +83,7 @@ def show_page():
     
     # CSS로 디자인한 커스텀 빨간 버튼 사용
     st.markdown("""
-        <a href="https://cheongram-git-dev-cheongram.vercel.app" target="_blank" class="custom-red-btn">
+        <a href="https://cheongram.vercel.app/">
             📝 청람학술제 학술활동지원시스템으로 이동하기 ➔
         </a>
     """, unsafe_allow_html=True)
