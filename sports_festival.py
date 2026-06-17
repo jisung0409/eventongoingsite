@@ -107,7 +107,7 @@ def get_match_status(match_time_str, winner):
     if winner:
         return f"✅ 종료 ({winner} 승리)"
     elif now >= match_time_str:
-        return "🔥 진행 중"
+        return "⏳ 예정"
     else:
         return "⏳ 예정"
 
